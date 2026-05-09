@@ -1,0 +1,32 @@
+## タスク
+
+- wulin/index.html を仕様のとおりに作成して。
+
+## 仕様
+
+- 画面デザインやロジックは showren/index.html を参考にする。
+- 連珠の対局サイト。https://kren1994.github.io/wulin/ にアクセスした人同士で対戦できる。
+- 対局部屋を作れる。持ち時間設定ができる。
+- 持ち時間はフィッシャー式。1手打つたびにX秒加算される。切れたら負け。
+- 開局規定として Targauchi-10 ルールが指定できる。
+- シンプルで洗練された UI にする。
+
+## Taraguchi-10 ルール
+
+- The black player puts the first move in the center of the board.
+- The other player may swap.
+- The white player will put the 2nd move within 3x3 central square.
+- The other player may swap.
+- The black player will put the 3rd move within 5x5 central square.
+- The other player may swap.
+- The white player will put the 4th move within 7x7 central square.
+
+The choice 1 (after the 4th move):
+- The other player may swap.
+- The black player will put the 5th move within 9x9 central square.
+- The other player may swap.
+- The white player plays the 6th move anywhere on board.
+
+The choice 2 (after the 4th move):
+- The black player puts ten 5th moves anywhere on board (symmetrical moves are not allowed).
+- The white player chooses one of the offered 5th moves and plays the 6th move anywhere on board.

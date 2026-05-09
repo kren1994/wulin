@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>wulin 使い方</title>
+  <style>
+    :root {
+      --text: #222;
+      --muted: #666;
+      --line: #ddd;
+      --accent: #17594a;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--text);
+      font-family: "Yu Gothic UI", "Hiragino Sans", Meiryo, sans-serif;
+      line-height: 1.7;
+      font-size: 13.5px;
+      padding: 24px;
+    }
+    .wrap {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    h1 {
+      margin: 0 0 6px;
+      font-size: 28px;
+      letter-spacing: 0.01em;
+    }
+    .lead {
+      margin: 0 0 20px;
+      color: var(--muted);
+    }
+    h2 {
+      margin: 18px 0 10px;
+      font-size: 18px;
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 5px;
+    }
+    ol, ul {
+      margin: 0;
+      padding-left: 22px;
+    }
+    li { margin: 4px 0; }
+    .note {
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .host-block {
+      margin-top: 6px;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-left: 4px solid var(--accent);
+      border-radius: 8px;
+      background: #fafcfc;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>wulin</h1>
+    <p class="lead">ブラウザで使える Renju（連珠）対局所です。合言葉で同じ部屋に入り、2 人で対局、他の参加者は観戦できます。</p>
+
+    <h2>対局の流れ</h2>
+    <ol>
+      <li><strong>入室する</strong><br>表示名と合言葉を入力して入室します。合言葉が同じなら同じ部屋に接続されます。</li>
+      <li><strong>席に着く（黒 / 白）</strong><br>黒席・白席の + で着席します。席が空いていれば参加者自身で着席できます。</li>
+      <li><strong>準備 OK を押す</strong><br>着席した 2 人がそれぞれ準備 OK にすると、自動で対局が始まります。</li>
+      <li><strong>開局（Taraguchi-10）</strong><br>開局は Taraguchi-10 進行です。途中で Swap 選択や、黒の Choice（10 題提示）分岐があります。</li>
+      <li><strong>対局を進める</strong><br>着手すると持ち時間が加算されます（フィッシャールール）。</li>
+      <li><strong>終局・局後検討</strong><br>勝敗、時間切れ、満局合意、終局などで対局終了。終了後は局後検討モードで手順を前後できます。</li>
+    </ol>
+
+    <h2>主な機能</h2>
+    <ul>
+      <li>2 人対局 + 観戦席</li>
+      <li>プレイヤー名の末尾に * が表示されている人はホスト</li>
+      <li>ホストは以下の権限をもつ
+        <ul>
+          <li>持ち時間設定（基本分 + 秒加算）</li>
+          <li>対局席の退席管理</li>
+        </ul>
+      </li>
+      <li>チャット（入退室ログ / コメント投稿）</li>
+      <li>満局提案、待った、終局</li>
+      <li>局面ナビゲーション（<<, <, 最新, >, >>、矢印キー対応）</li>
+      <li>局後検討（終局後のみ）</li>
+      <li>表示設定（言語切替、効果音 ON/OFF、座標表示 ON/OFF、盤面色切替、手数表示 ON/OFF）</li>
+      <li>再接続対応（切断時は一時停止して復帰待機、一定時間復帰できない場合は終局）</li>
+    </ul>
+
+  </div>
+</body>
+</html>

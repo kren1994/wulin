@@ -1,0 +1,4443 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>wulin | 対局所</title>
+    <style>
+        :root {
+            --bg: #f3efe6;
+            --bg-accent: #e2d5bc;
+            --panel: rgba(255, 252, 246, 0.88);
+            --panel-strong: #fffaf1;
+            --line: rgba(74, 54, 34, 0.18);
+            --text: #2f2418;
+            --muted: #7b6855;
+            --accent: #17594a;
+            --accent-strong: #0f4338;
+            --accent-soft: rgba(23, 89, 74, 0.12);
+            --warn: #a44b1f;
+            --danger: #8b2f28;
+            --shadow: 0 24px 60px rgba(63, 43, 21, 0.14);
+            --radius-xl: 28px;
+            --radius-lg: 18px;
+            --radius-md: 12px;
+            --radius-sm: 10px;
+            --shell-padding: clamp(10px, 2vw, 18px);
+            color: var(--text);
+            font-family: "Yu Gothic UI", "Hiragino Sans", Meiryo, sans-serif;
+        }
+
+        html {
+            -webkit-touch-callout: none;
+        }
+        
+        body {
+            margin: 0;
+            min-height: 100%;
+            background:
+                radial-gradient(circle at top, rgba(255, 255, 255, 0.68), transparent 42%),
+                linear-gradient(180deg, var(--bg) 0%, var(--bg-accent) 100%);
+            padding: clamp(6px, 1.8vw, 18px);
+            box-sizing: border-box;
+            overscroll-behavior-y: none;
+        }
+
+        .app-shell {
+            width: min(100%, 1320px);
+            margin: 0 auto;
+            padding: var(--shell-padding);
+            border-radius: 32px;
+            box-sizing: border-box;
+        }
+
+        [hidden] {
+            display: none !important;
+        }
+
+        .screen[hidden] {
+            display: none !important;
+        }
+
+        .lobby-screen {
+            display: grid;
+            gap: 18px;
+        }
+
+        .lobby-head {
+            padding: 20px 22px;
+            border-radius: var(--radius-xl);
+            border: 1px solid var(--line);
+            background: rgba(255, 252, 246, 0.72);
+            backdrop-filter: blur(12px);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+            text-align: center;
+        }
+
+        .lobby-title {
+            margin: 0;
+            font-size: clamp(30px, 4.6vw, 48px);
+            line-height: 0.98;
+            letter-spacing: -0.04em;
+        }
+
+        .lobby-grid {
+            display: flex;
+            justify-content: center;
+        }
+        
+        .lobby-grid .panel {
+            width: 100%;
+            max-width: 360px;
+        }
+
+        .lobby-help {
+            margin-top: 14px;
+            text-align: center;
+        }
+
+        .lobby-help-link {
+            display: inline-block;
+            font-size: 13px;
+            color: var(--accent-strong);
+            text-decoration: underline;
+            text-underline-offset: 2px;
+        }
+
+        .lobby-help-link:hover {
+            opacity: 0.8;
+        }
+
+        .game-screen {
+            display: grid;
+            gap: 14px;
+        }
+
+        .game-topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .panel,
+        .card,
+        .player-card {
+            border: 1px solid var(--line);
+            background: var(--panel);
+            backdrop-filter: blur(10px);
+        }
+
+        .player-name,
+        .section-title,
+        .control-main {
+            display: block;
+            font-weight: 700;
+            min-height: 1.5em; 
+        }
+
+        .player-meta,
+        .card p,
+        .game-kicker {
+            color: var(--muted);
+        }
+
+        .layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1.55fr) minmax(320px, 0.95fr);
+            gap: 18px;
+        }
+
+        .panel {
+            padding: 16px;
+            border-radius: var(--radius-xl);
+            min-width: 0;
+        }
+
+        .field {
+            display: grid;
+            gap: 6px;
+        }
+
+        .field label,
+        .card h2 {
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+        }
+
+        .field input {
+            width: 100%;
+            min-height: 46px;
+            padding: 12px 14px;
+            border-radius: 14px;
+            border: 1px solid rgba(74, 54, 34, 0.12);
+            background: rgba(255, 255, 255, 0.85);
+            color: var(--text);
+            box-sizing: border-box;
+        }
+
+        .field input:focus {
+            outline: 2px solid rgba(23, 89, 74, 0.25);
+            border-color: rgba(23, 89, 74, 0.38);
+        }
+
+        .button-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .button {
+            min-height: 48px;
+            padding: 0 16px;
+            border-radius: 14px;
+            font-weight: 700;
+            transition: transform 0.18s ease, opacity 0.18s ease, background 0.18s ease;
+            cursor: pointer;
+            border: none;
+        }
+
+        .button:hover {
+            transform: translateY(-1px);
+        }
+
+        .button:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .button-primary {
+            background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+            color: #f9fbf8;
+        }
+
+        .button-secondary {
+            background: rgba(255, 255, 255, 0.9);
+            color: var(--text);
+            border: 1px solid rgba(74, 54, 34, 0.12);
+        }
+
+        .button-warn {
+            background: rgba(164, 75, 31, 0.1);
+            color: var(--warn);
+            border: 1px solid rgba(164, 75, 31, 0.18);
+        }
+
+        .players {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+            margin-bottom: 5px;
+        }
+
+        .player-card {
+            padding: 8px 10px;
+            border-radius: var(--radius-md);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+        }
+
+        .player-card.active {
+            border-color: rgba(23, 89, 74, 0.32);
+            box-shadow: inset 0 0 0 1px rgba(23, 89, 74, 0.18);
+            background: rgba(234, 247, 242, 0.92);
+        }
+
+        .player-card.black::before,
+        .player-card.white::before {
+            content: "";
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            left: 10px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            border: 1px solid rgba(47, 36, 24, 0.25);
+        }
+
+        .player-card.black::before {
+            background: #26211e;
+        }
+
+        .player-card.white::before {
+            background: #f8f5ef;
+        }
+
+        .player-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            padding-left: 24px;
+            width: 100%;
+        }
+
+        .seat-symbol {
+            width: 30px;
+            height: 30px;
+            border-radius: 999px;
+            border: 1px solid rgba(74, 54, 34, 0.16);
+            background: rgba(255, 255, 255, 0.92);
+            color: var(--text);
+            font-size: 20px;
+            line-height: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            cursor: pointer;
+        }
+
+        .seat-symbol:disabled {
+            opacity: 0.32;
+            cursor: not-allowed;
+        }
+
+        .player-main {
+            display: flex;
+            flex: 1;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 8px;
+            min-width: 0;
+        }
+
+        .player-name {
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .player-actions {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .player-timer {
+            font-size: clamp(16px, 2.8vw, 22px);
+            font-weight: 800;
+            letter-spacing: -0.04em;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .player-ready {
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .ready-mark {
+            width: 28px;
+            height: 28px;
+            border-radius: 999px;
+            border: 1px solid rgba(74, 54, 34, 0.16);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 800;
+            color: rgba(47, 36, 24, 0.32);
+            background: rgba(255, 255, 255, 0.72);
+        }
+
+        .ready-mark.passive {
+            opacity: 0.72;
+        }
+
+        .ready-mark.active {
+            color: #f8fbf8;
+            background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+            border-color: rgba(23, 89, 74, 0.42);
+        }
+
+        .ready-button {
+            width: 28px;
+            height: 28px;
+            padding: 0;
+            border-radius: 999px;
+            border: 1px solid rgba(74, 54, 34, 0.16);
+            background: rgba(255, 255, 255, 0.92);
+            color: rgba(47, 36, 24, 0.42);
+            font-size: 14px;
+            font-weight: 800;
+            line-height: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            touch-action: manipulation;
+            user-select: none;
+        }
+
+        .ready-button.active {
+            color: #f8fbf8;
+            background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+            border-color: rgba(23, 89, 74, 0.42);
+        }
+
+        /* 透過ダイアログのスタイル */
+        .confirm-backdrop {
+            position: fixed;
+            inset: 0;
+            display: grid;
+            place-items: center;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.05);
+            z-index: 30;
+        }
+
+        .confirm-card {
+            width: auto;
+            min-width: 240px;
+            max-width: min(100%, 360px);
+            padding: 16px;
+            border-radius: 20px;
+            border: 1px solid rgba(74, 54, 34, 0.1);
+            background: rgba(255, 252, 246, 0.65);
+            backdrop-filter: blur(2px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            display: grid;
+            gap: 14px;
+        }
+
+        .confirm-actions {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        /* 盤面コンテナ（歪み防止の核） */
+        .board-container {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto;
+        }
+
+        .board-wrap {
+            position: relative;
+            border-radius: 26px;
+            overflow: visible;
+            padding: 0;
+            box-sizing: border-box;
+            background: transparent;
+            box-shadow: none;
+        }
+
+        #boardCanvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            cursor: pointer;
+            touch-action: none; /* ズーム等を防ぐ */
+        }
+
+        .board-controls {
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr) auto;
+            gap: 8px;
+            width: 100%;
+            box-sizing: border-box;
+            align-items: center;
+            margin-top: 5px;
+            padding: 8px;
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: var(--radius-lg);
+            backdrop-filter: blur(10px);
+        }
+
+        .ctrl-left, .ctrl-center, .ctrl-right { display: flex; align-items: center; }
+        .ctrl-left, .ctrl-right { gap: 6px; }
+        .ctrl-center { gap: 6px; justify-content: center; min-width: 0; }
+        .control-menu { position: relative; }
+        
+        .board-controls button {
+            padding: 10px 12px;
+            border: 1px solid rgba(74, 54, 34, 0.12);
+            background: rgba(255, 255, 255, 0.85);
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            touch-action: manipulation;
+            white-space: nowrap;
+            user-select: none;
+            color: var(--text);
+            transition: transform 0.18s ease, background 0.18s ease;
+        }
+        .board-controls button:hover { background: rgba(255, 255, 255, 1); transform: translateY(-1px); }
+        .board-controls button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+        
+        .menu-icon-btn {
+            width: 42px; height: 42px; padding: 0; display: inline-flex; align-items: center; justify-content: center;
+        }
+        .menu-icon-btn.active { background: rgba(23, 89, 74, 0.1); border-color: rgba(23, 89, 74, 0.38); color: var(--accent-strong); }
+        .control-icon { display: inline-flex; width: 22px; height: 22px; }
+        .control-icon svg { width: 100%; height: 100%; fill: currentColor; }
+        .control-menu-popup {
+            position: absolute; bottom: calc(100% + 8px); min-width: 144px; display: flex; flex-direction: column; gap: 0;
+            padding: 5px; border: 1px solid var(--line); border-radius: 14px; background: rgba(255, 252, 246, 0.98);
+            box-shadow: var(--shadow); z-index: 20;
+        }
+        .control-menu-popup[hidden] { display: none !important; }
+        .control-menu.align-right .control-menu-popup { right: 0; }
+        .control-menu:not(.align-right) .control-menu-popup { left: 0; }
+        
+        .board-controls .control-menu-item {
+            width: 100%; text-align: left; padding: 12px 14px; font-size: 13px; font-weight: 600;
+            color: var(--text); background: transparent; border: none; box-shadow: none; border-radius: 10px; outline: none;
+            display: flex; align-items: center; justify-content: space-between; gap: 10px;
+        }
+        .board-controls .control-menu-item:hover { background: rgba(23, 89, 74, 0.08); transform: none; }
+        .board-controls .control-menu-item::after { content: ''; width: 1em; flex: 0 0 1em; }
+        .board-controls .control-menu-item.active::after { content: '✓'; color: var(--muted); }
+        .board-controls .control-menu-item.board-theme-item::after,
+        .board-controls .control-menu-item[data-value]::after { content: attr(data-value); width: auto; flex: 0 0 auto; color: var(--muted); }
+        
+        .nav-btn {
+            padding: 0; display: inline-flex; align-items: center; justify-content: center;
+            text-align: center; line-height: 1; height: 42px;
+        }
+        .nav-btn.branch { width: 3.5em; letter-spacing: -0.08em; }
+        .nav-btn.step { width: 3.5em; }
+
+        .sidebar {
+            display: grid;
+            gap: 14px;
+            align-content: start;
+            min-width: 0;
+        }
+
+        .card {
+            padding: 16px;
+            border-radius: var(--radius-xl);
+        }
+
+        .card h2 {
+            margin: 0 0 12px;
+            font-size: 15px;
+        }
+
+        .card p {
+            margin: 0;
+            line-height: 1.65;
+            font-size: 14px;
+        }
+
+        .info-card {
+            display: grid;
+            gap: 12px;
+        }
+
+        .info-topline {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .compact-time-editor {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .compact-time-editor input {
+            width: 4.2em;
+            min-height: 34px;
+            padding: 6px 8px;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 13px;
+        }
+
+        .compact-time-editor span {
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .spectator-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: grid;
+            align-content: start;
+            gap: 8px;
+            max-height: 88px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+
+        .spectator-item {
+            padding: 10px 12px;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.66);
+            border: 1px solid rgba(74, 54, 34, 0.08);
+            margin: 0;
+            font-size: 14px;
+            min-height: 40px;
+            box-sizing: border-box;
+        }
+
+        .move-list,
+        .log-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: grid;
+            align-content: start; /* ここで縦に伸びるのを防ぐ */
+            gap: 10px;
+            max-height: 260px;
+            overflow: auto;
+            padding-right: 4px;
+        }
+
+        .move-item,
+        .log-item {
+            padding: 10px 12px;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.62);
+            border: 1px solid rgba(74, 54, 34, 0.08);
+        }
+
+        .log-item {
+            display: grid;
+            gap: 4px;
+        }
+
+        .log-head {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            font-size: 12px;
+        }
+
+        .log-body {
+            font-size: 14px;
+            line-height: 1.55;
+        }
+
+        .log-compose {
+            margin-top: 12px;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 8px;
+        }
+
+        .log-compose input {
+            min-width: 0;
+            min-height: 40px;
+            padding: 8px 10px;
+            border-radius: 12px;
+            border: 1px solid rgba(74, 54, 34, 0.12);
+            background: rgba(255, 255, 255, 0.88);
+            color: var(--text);
+            font-size: 14px;
+        }
+
+        .log-author {
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .toast {
+            position: fixed;
+            right: 18px;
+            bottom: 18px;
+            min-width: 260px;
+            max-width: min(420px, calc(100vw - 36px));
+            padding: 14px 16px;
+            border-radius: 16px;
+            background: rgba(32, 26, 20, 0.9);
+            color: #f8f5ef;
+            box-shadow: 0 18px 36px rgba(24, 17, 12, 0.28);
+            opacity: 0;
+            transform: translateY(14px);
+            pointer-events: none;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            z-index: 20;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .mono {
+            font-family: Consolas, "Courier New", monospace;
+            letter-spacing: 0.02em;
+        }
+
+        /* PC画面幅 (1081px以上) のレイアウト: スクロールさせず1画面に収める */
+        @media (min-width: 1081px) {
+            html, body {
+                height: 100%;
+                overflow: hidden;
+            }
+            body {
+                padding: 4px;
+            }
+            .app-shell {
+                height: 100%;
+                display: flex;
+                flex-direction: column;
+                padding: 8px;
+            }
+            .game-screen {
+                flex: 1;
+                min-height: 0;
+                display: grid;
+                grid-template-rows: minmax(0, 1fr);
+            }
+            .layout {
+                min-height: 0;
+                align-items: center;
+                gap: 12px;
+                height: 100%;
+            }
+            .panel {
+                padding: 12px;
+            }
+            .layout > .panel:first-child {
+                display: flex;
+                flex-direction: column;
+                min-height: 0;
+                height: min(100%, 820px);
+                max-height: calc(100vh - 24px);
+                justify-content: center;
+                gap: 8px;
+            }
+            .players, .board-controls {
+                flex: 0 0 auto;
+            }
+            .board-container {
+                flex: 0 1 auto;
+                min-height: 0;
+                height: min(calc(100vh - 150px), 680px);
+                max-height: 680px;
+                aspect-ratio: 1 / 1;
+            }
+            .sidebar .card h2 {
+                display: none !important;
+            }
+            .sidebar {
+                display: flex;
+                flex-direction: column;
+                min-height: 0;
+                max-height: min(calc(100vh - 24px), 760px);
+                overflow-y: auto; 
+            }
+            .sidebar > .card:nth-child(1) {
+                flex: 0 1 420px;
+                display: flex;
+                flex-direction: column;
+                min-height: 0;
+                max-height: 420px;
+            }
+            .sidebar > .card:nth-child(1) .log-list {
+                flex: 1 1 auto;
+                max-height: none;
+                overflow-y: auto;
+            }
+        }
+
+        /* スマホ・タブレット縦など (1080px以下) */
+        @media (min-width: 1081px) and (max-width: 1280px) and (orientation: landscape) {
+            .layout > .panel:first-child {
+                gap: 6px;
+            }
+            .players {
+                gap: 6px;
+                margin-bottom: 0;
+            }
+            .player-card {
+                padding: 4px 8px;
+            }
+            .player-head {
+                gap: 6px;
+                padding-left: 18px;
+            }
+            .player-card.black::before,
+            .player-card.white::before {
+                left: 7px;
+                width: 7px;
+                height: 7px;
+            }
+            .player-name {
+                font-size: 11px;
+                min-height: 1.1em;
+            }
+            .player-main,
+            .player-actions {
+                gap: 5px;
+            }
+            .player-timer {
+                font-size: 15px;
+            }
+            .seat-symbol,
+            .ready-mark,
+            .ready-button {
+                width: 22px;
+                height: 22px;
+                font-size: 12px;
+            }
+            .board-container {
+                height: min(calc(100vh - 108px), 660px);
+                max-height: 660px;
+            }
+        }
+
+        @media (max-width: 1080px) {
+            .layout {
+                grid-template-columns: 1fr;
+            }
+            .sidebar .card h2 {
+                display: none !important;
+            }
+            .board-container {
+                aspect-ratio: 1 / 1;
+            }
+        }
+
+        /* スマホ向けレイアウト */
+        @media (min-width: 721px) and (max-width: 1080px) {
+            .players,
+            .board-controls {
+                width: min(100%, 680px);
+                max-width: 680px;
+                margin-left: auto;
+                margin-right: auto;
+            }
+            .board-container {
+                width: min(100%, 680px);
+                max-width: 680px;
+                margin: 0 auto;
+            }
+        }
+
+        @media (min-width: 721px) and (max-width: 1080px) and (orientation: landscape) {
+            .players {
+                gap: 6px;
+                margin-bottom: 0;
+            }
+            .player-card {
+                padding: 4px 8px;
+            }
+            .player-head {
+                gap: 6px;
+                padding-left: 18px;
+            }
+            .player-card.black::before,
+            .player-card.white::before {
+                left: 7px;
+                width: 7px;
+                height: 7px;
+            }
+            .player-name {
+                font-size: 11px;
+                min-height: 1.1em;
+            }
+            .player-main,
+            .player-actions {
+                gap: 5px;
+            }
+            .player-timer {
+                font-size: 15px;
+            }
+            .seat-symbol,
+            .ready-mark,
+            .ready-button {
+                width: 22px;
+                height: 22px;
+                font-size: 12px;
+            }
+        }
+
+        @media (max-width: 720px) {
+            body { padding: 0; }
+            .app-shell {
+                width: 100%;
+                margin: 0 auto;
+                padding: 6px;
+                border-radius: 0;
+            }
+
+            .game-screen .layout > .panel:first-child {
+                background: transparent;
+                border: none;
+                padding: 0;
+                border-radius: 0;
+                box-shadow: none;
+            }
+
+            .panel,
+            .card {
+                padding: 12px;
+                border-radius: 18px;
+            }
+
+            .players {
+                grid-template-columns: 1fr;
+                margin-bottom: 8px;
+                padding: 0 4px;
+            }
+
+            .layout {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                grid-template-columns: 1fr;
+                padding: 0 4px;
+            }
+
+            .info-topline {
+                align-items: stretch;
+            }
+
+            .board-wrap {
+                border-radius: 18px;
+            }
+
+            .player-card {
+                padding: 6px 8px; /* 縦幅を小さく */
+            }
+
+            .player-head {
+                gap: 6px;
+                padding-left: 20px;
+            }
+
+            .player-card.black::before,
+            .player-card.white::before {
+                left: 6px;
+                width: 8px;
+                height: 8px;
+            }
+
+            .player-name {
+                font-size: 11px; /* 2/3程度に縮小 */
+                min-height: 1.2em;
+            }
+
+            .player-actions {
+                gap: 5px;
+            }
+
+            .player-timer {
+                font-size: clamp(14px, 4vw, 18px);
+            }
+            
+            .seat-symbol {
+                width: 24px;
+                height: 24px;
+                font-size: 16px;
+            }
+            
+            .ready-mark, .ready-button {
+                width: 24px;
+                height: 24px;
+                font-size: 12px;
+            }
+
+            .game-topbar {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 10px;
+            }
+
+            .board-controls { padding: 6px; gap: 4px; margin-top: 4px; border-radius: 12px; }
+            .menu-icon-btn { width: 42px; height: 42px; }
+            .nav-btn { height: 42px; }
+            .nav-btn.branch { width: 2.8em; }
+            .nav-btn.step { width: 2.8em; }
+
+            .toast {
+                right: 10px;
+                left: 10px;
+                bottom: 10px;
+                min-width: 0;
+                max-width: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-shell">
+        <section id="lobbyScreen" class="screen lobby-screen">
+            <header class="lobby-head">
+                <h1 class="lobby-title" id="uiLobbyTitle">対局所</h1>
+            </header>
+
+            <div class="lobby-grid">
+                <section class="panel">
+                    <div class="field">
+                        <label for="nameInput" id="uiDisplayNameLabel">表示名</label>
+                        <input id="nameInput" type="text" maxlength="24" placeholder="例: kren1994">
+                    </div>
+                    <div class="field" style="margin-top: 14px;">
+                        <label for="roomCodeInput" id="uiRoomCodeLabel">合言葉</label>
+                        <input id="roomCodeInput" type="text" maxlength="24" placeholder="例: apple123">
+                    </div>
+                    <div class="button-row" style="margin-top: 24px;">
+                        <button id="joinRoomBtn" class="button button-primary" type="button" style="width: 100%;">入室</button>
+                    </div>
+                    <div class="lobby-help">
+                        <a class="lobby-help-link" href="./README.html" target="_blank" rel="noopener noreferrer">使い方を見る</a>
+                    </div>
+                </section>
+            </div>
+        </section>
+
+        <section id="gameScreen" class="screen game-screen" hidden>
+            <span id="gameKicker" hidden></span>
+            <button id="leaveRoomBtn" hidden></button>
+
+            <main class="layout">
+                <section class="panel">
+                    <div class="players">
+                        <article id="blackPlayerCard" class="player-card black">
+                            <div class="player-head">
+                                <div class="player-main">
+                                    <div id="blackPlayerName" class="player-name"></div>
+                                    <div id="blackPlayerTimer" class="player-timer">05:00</div>
+                                </div>
+                                <div class="player-actions">
+                                    <div id="blackReadyWrap" class="player-ready"></div>
+                                    <button id="blackSeatBtn" class="seat-symbol" type="button">＋</button>
+                                </div>
+                            </div>
+                        </article>
+                        <article id="whitePlayerCard" class="player-card white">
+                            <div class="player-head">
+                                <div class="player-main">
+                                    <div id="whitePlayerName" class="player-name"></div>
+                                    <div id="whitePlayerTimer" class="player-timer">05:00</div>
+                                </div>
+                                <div class="player-actions">
+                                    <div id="whiteReadyWrap" class="player-ready"></div>
+                                    <button id="whiteSeatBtn" class="seat-symbol" type="button">＋</button>
+                                </div>
+                            </div>
+                        </article>
+                    </div>
+
+                    <div class="board-container" id="boardContainer">
+                        <div class="board-wrap" id="boardWrap">
+                            <canvas id="boardCanvas" width="760" height="760"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="board-controls">
+                        <div class="ctrl-left">
+                            <div class="control-menu">
+                                <button id="actionMenuBtn" class="menu-icon-btn" type="button" aria-haspopup="menu" aria-expanded="false" aria-label="アクション">
+                                    <span class="control-icon" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="8" cy="12" r="5"/><circle cx="18" cy="12" r="5" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+                                    </span>
+                                </button>
+                                <div id="actionMenu" class="control-menu-popup" hidden>
+                                    <button id="menuResignBtn" class="control-menu-item" type="button">終局</button>
+                                    <button id="menuDrawBtn" class="control-menu-item" type="button">満局提案</button>
+                                    <button id="menuTakebackBtn" class="control-menu-item" type="button">待った</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="ctrl-center">
+                            <button class="nav-btn branch" type="button" onclick="goMoves(-4)">&lt;&lt;</button>
+                            <button class="nav-btn step" type="button" onclick="goMoves(-1)">&lt;</button>
+                            <button class="nav-btn step" type="button" onclick="resetMovesView()" aria-label="最新/終局図">
+                                <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                                    <path d="M17.65 6.35A7.95 7.95 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+                                </svg>
+                            </button>
+                            <button class="nav-btn step" type="button" onclick="goMoves(1)">&gt;</button>
+                            <button class="nav-btn branch" type="button" onclick="goMoves(4)">&gt;&gt;</button>
+                        </div>
+                        <div class="ctrl-right">
+                            <div class="control-menu align-right">
+                                <button id="viewMenuBtn" class="menu-icon-btn" type="button" aria-haspopup="menu" aria-expanded="false" aria-label="表示設定">
+                                    <span class="control-icon" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 5c5.27 0 9.4 4.18 10.58 6.5C21.4 13.82 17.27 18 12 18S2.6 13.82 1.42 11.5C2.6 9.18 6.73 5 12 5m0-2C5.73 3 1 8.5 1 11.5S5.73 20 12 20s11-5.5 11-8.5S18.27 3 12 3m0 4.5A4.5 4.5 0 1 0 16.5 12 4.5 4.5 0 0 0 12 7.5m0 2A2.5 2.5 0 1 1 9.5 12 2.5 2.5 0 0 1 12 9.5"/></svg>
+                                    </span>
+                                </button>
+                                <div id="viewMenu" class="control-menu-popup" hidden>
+                                    <button id="langBtn" class="control-menu-item" type="button" data-value="日">言語</button>
+                                    <button id="soundBtn" class="control-menu-item active" type="button">効果音</button>
+                                    <button id="coordsBtn" class="control-menu-item active" type="button">座標</button>
+                                    <button id="themeBtn" class="control-menu-item board-theme-item" type="button" data-value="茶">盤面色</button>
+                                    <button id="moveNumBtn" class="control-menu-item active" type="button">手数</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </section>
+
+                <aside class="sidebar">
+                    <section class="card">
+                        <h2 id="uiChatTitle">チャット</h2>
+                        <ul id="logList" class="log-list"></ul>
+                        <div class="log-compose">
+                            <input id="logCommentInput" type="text" maxlength="140" placeholder="コメントを書く">
+                            <button id="sendLogCommentBtn" class="button button-secondary" type="button">投稿</button>
+                        </div>
+                    </section>
+
+                    <section class="card">
+                        <h2 id="uiSpectatorTitle">観戦席</h2>
+                        <ul id="spectatorList" class="spectator-list"></ul>
+                    </section>
+
+                    <section class="card info-card">
+                        <h2 id="uiInfoTitle">対局情報</h2>
+                        <div class="info-topline">
+                            <p id="roomSummary">5 分 + 5 秒</p>
+                        </div>
+                        <div id="timeEditor" class="compact-time-editor" hidden>
+                            <input id="infoBaseMinutesInput" type="number" min="1" max="180" value="5">
+                            <span id="uiMinute">分</span>
+                            <input id="infoIncrementInput" type="number" min="0" max="60" value="5">
+                            <span id="uiSecond">秒</span>
+                        </div>
+                    </section>
+                </aside>
+            </main>
+        </section>
+    </div>
+
+    <!-- 動的アクション用ダイアログ -->
+    <div id="actionConfirm" class="confirm-backdrop" hidden>
+        <div class="confirm-card" role="dialog" aria-modal="true">
+            <div id="actionConfirmButtons" class="confirm-actions">
+            </div>
+        </div>
+    </div>
+
+    <div id="drawConfirm" class="confirm-backdrop" hidden>
+        <div class="confirm-card" role="dialog" aria-modal="true">
+            <div class="confirm-actions">
+                <button id="drawDeclineBtn" class="button button-secondary" type="button">拒否</button>
+                <button id="drawAcceptBtn" class="button button-primary" type="button">満局合意</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="takebackConfirm" class="confirm-backdrop" hidden>
+        <div class="confirm-card" role="dialog" aria-modal="true">
+            <div class="confirm-actions">
+                <button id="takebackDeclineBtn" class="button button-secondary" type="button">拒否</button>
+                <button id="takebackAcceptBtn" class="button button-primary" type="button">待った合意</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="resignConfirm" class="confirm-backdrop" hidden>
+        <div class="confirm-card" role="dialog" aria-modal="true">
+            <div class="confirm-actions">
+                <button id="resignCancelBtn" class="button button-secondary" type="button">キャンセル</button>
+                <button id="resignConfirmBtn" class="button button-primary" type="button">終局</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast" aria-live="polite"></div>
+
+    <script src="./ws-config.js"></script>
+    <script src="./peer-over-ws.js"></script>
+    <script>
+        function isTouchMain() {
+            return window.matchMedia('(pointer: coarse)').matches
+                && window.matchMedia('(hover: none)').matches
+                && window.innerWidth <= 1199;
+        }
+
+        if (isTouchMain()) {
+            document.addEventListener('dblclick', (e) => {
+                e.preventDefault();
+            }, { passive: false });
+            for (const eventName of ['gesturestart', 'gesturechange', 'gestureend']) {
+                document.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                }, { passive: false });
+            }
+        }
+
+        const BOARD_SIZE = 15;
+        const CENTER = 7;
+        const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O'];
+        const STAR_POINTS = [
+            [3, 3], [11, 3],
+            [7, 7],
+            [3, 11], [11, 11],
+        ];
+        const MAX_LOG_ITEMS = 64;
+        const ROOM_PREFIX = 'wulin-room-';
+        const PLAYER_TOKEN_PREFIX = 'wulin-player-token:';
+        const DISCONNECT_GRACE_MS = 120000;
+
+        const elements = {
+            lobbyScreen: document.getElementById('lobbyScreen'),
+            gameScreen: document.getElementById('gameScreen'),
+            nameInput: document.getElementById('nameInput'),
+            roomCodeInput: document.getElementById('roomCodeInput'),
+            joinRoomBtn: document.getElementById('joinRoomBtn'),
+            leaveRoomBtn: document.getElementById('leaveRoomBtn'),
+            gameKicker: document.getElementById('gameKicker'),
+            blackPlayerCard: document.getElementById('blackPlayerCard'),
+            whitePlayerCard: document.getElementById('whitePlayerCard'),
+            blackPlayerName: document.getElementById('blackPlayerName'),
+            whitePlayerName: document.getElementById('whitePlayerName'),
+            blackPlayerTimer: document.getElementById('blackPlayerTimer'),
+            whitePlayerTimer: document.getElementById('whitePlayerTimer'),
+            blackSeatBtn: document.getElementById('blackSeatBtn'),
+            whiteSeatBtn: document.getElementById('whiteSeatBtn'),
+            blackReadyWrap: document.getElementById('blackReadyWrap'),
+            whiteReadyWrap: document.getElementById('whiteReadyWrap'),
+            boardCanvas: document.getElementById('boardCanvas'),
+            timeEditor: document.getElementById('timeEditor'),
+            infoBaseMinutesInput: document.getElementById('infoBaseMinutesInput'),
+            infoIncrementInput: document.getElementById('infoIncrementInput'),
+            spectatorList: document.getElementById('spectatorList'),
+            roomSummary: document.getElementById('roomSummary'),
+            logList: document.getElementById('logList'),
+            logCommentInput: document.getElementById('logCommentInput'),
+            sendLogCommentBtn: document.getElementById('sendLogCommentBtn'),
+            drawConfirm: document.getElementById('drawConfirm'),
+            drawAcceptBtn: document.getElementById('drawAcceptBtn'),
+            drawDeclineBtn: document.getElementById('drawDeclineBtn'),
+            takebackConfirm: document.getElementById('takebackConfirm'),
+            takebackAcceptBtn: document.getElementById('takebackAcceptBtn'),
+            takebackDeclineBtn: document.getElementById('takebackDeclineBtn'),
+            resignConfirm: document.getElementById('resignConfirm'),
+            resignConfirmBtn: document.getElementById('resignConfirmBtn'),
+            resignCancelBtn: document.getElementById('resignCancelBtn'),
+            actionConfirm: document.getElementById('actionConfirm'),
+            actionConfirmButtons: document.getElementById('actionConfirmButtons'),
+            menuDrawBtn: document.getElementById('menuDrawBtn'),
+            menuResignBtn: document.getElementById('menuResignBtn'),
+            menuTakebackBtn: document.getElementById('menuTakebackBtn'),
+            toast: document.getElementById('toast'),
+            
+            uiLobbyTitle: document.getElementById('uiLobbyTitle'),
+            uiDisplayNameLabel: document.getElementById('uiDisplayNameLabel'),
+            uiRoomCodeLabel: document.getElementById('uiRoomCodeLabel'),
+            uiChatTitle: document.getElementById('uiChatTitle'),
+            uiSpectatorTitle: document.getElementById('uiSpectatorTitle'),
+            uiInfoTitle: document.getElementById('uiInfoTitle'),
+            uiMinute: document.getElementById('uiMinute'),
+            uiSecond: document.getElementById('uiSecond'),
+        };
+
+        const ctx = elements.boardCanvas.getContext('2d');
+
+        let peer = null;
+        let hostConnection = null;
+        let state = null;
+        let roomId = '';
+        let localPeerId = '';
+        let localMode = 'idle';
+        let connectionState = '未接続';
+        let toastTimer = null;
+        let boardGeometry = null;
+        let resizeFrame = 0;
+        let lastClockBroadcastBucket = null;
+        let resignConfirmOpen = false;
+        const guestConnections = new Map();
+
+        let showCoords = true;
+        let showMoveNumbers = true;
+        let boardThemeIndex = 0;
+        let currentLanguage = 'ja';
+        let displayMoveCount = -1;
+        let pendingMove = null;
+        let currentOpenControlMenu = null;
+        let dismissedActionDialogPhase = '';
+        let localPlayerToken = '';
+        let hasNotifiedHostLeaving = false;
+        let hostReconnectTimer = 0;
+        let hostTakeoverInProgress = false;
+        const suppressedConnectionClosePeers = new Set();
+        
+        let soundEnabled = true;
+        let audioCtx = null;
+        const STONE_SOUND_SRC = './mp3/play1.mp3';
+        const STONE_SOUND_POOL_SIZE = 4;
+        const STONE_SOUND_POOL_MAX = 8;
+        let stoneSoundBuffer = null;
+        let stoneSoundBufferPromise = null;
+        let stoneSoundPool = [];
+        let lastReportedSec = null;
+
+        function initAudio() {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (AudioContext) {
+                    audioCtx = new AudioContext();
+                }
+            }
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function initStoneSound() {
+            if (stoneSoundPool.length || !window.Audio) return;
+            stoneSoundPool = Array.from({ length: STONE_SOUND_POOL_SIZE }, () => {
+                return createStoneAudioElement();
+            });
+        }
+
+        function createStoneAudioElement() {
+            const sound = new Audio(STONE_SOUND_SRC);
+            sound.preload = 'none';
+            return sound;
+        }
+
+        function decodeAudioDataCompat(arrayBuffer) {
+            return new Promise((resolve, reject) => {
+                const decoded = audioCtx.decodeAudioData(arrayBuffer, resolve, reject);
+                if (decoded && typeof decoded.then === 'function') {
+                    decoded.then(resolve, reject);
+                }
+            });
+        }
+
+        function ensureStoneSoundBuffer() {
+            if (!audioCtx || stoneSoundBuffer || stoneSoundBufferPromise) return;
+            stoneSoundBufferPromise = fetch(STONE_SOUND_SRC)
+                .then((response) => {
+                    if (!response.ok) throw new Error(`stone sound load failed: ${response.status}`);
+                    return response.arrayBuffer();
+                })
+                .then(decodeAudioDataCompat)
+                .then((buffer) => {
+                    stoneSoundBuffer = buffer;
+                    return buffer;
+                })
+                .catch(() => {
+                    stoneSoundBufferPromise = null;
+                    return null;
+                });
+        }
+
+        document.body.addEventListener('pointerdown', () => {
+            if (soundEnabled) initAudio();
+        }, { once: true, capture: true });
+
+        function playStoneSoundBuffer() {
+            if (!audioCtx || !stoneSoundBuffer || audioCtx.state !== 'running') return false;
+            const source = audioCtx.createBufferSource();
+            const gain = audioCtx.createGain();
+            source.buffer = stoneSoundBuffer;
+            gain.gain.value = 1;
+            source.connect(gain);
+            gain.connect(audioCtx.destination);
+            source.start();
+            return true;
+        }
+
+        function playStoneSoundFallback() {
+            initStoneSound();
+            if (!stoneSoundPool.length) return;
+            let sound = stoneSoundPool.find((item) => item.paused || item.ended);
+            if (!sound && stoneSoundPool.length < STONE_SOUND_POOL_MAX) {
+                sound = createStoneAudioElement();
+                stoneSoundPool.push(sound);
+            }
+            if (!sound) return;
+            try {
+                sound.currentTime = 0;
+            } catch (error) {
+                // iOS may reject currentTime before metadata is available; play from the start anyway.
+            }
+            sound.play().catch(() => {});
+        }
+
+        function playStoneSound(isSelf) {
+            if (!soundEnabled) return;
+            initAudio();
+            ensureStoneSoundBuffer();
+            if (playStoneSoundBuffer()) return;
+            playStoneSoundFallback();
+        }
+
+        function playCountdownSound() {
+            if (!soundEnabled) return;
+            initAudio();
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+            
+            gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+            
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.1);
+        }
+
+        const boardThemes = [
+            { label: { ja: '茶', zh: '棕' }, grad1: '#e3c98c', grad2: '#bc8f51' },
+            { label: { ja: '緑', zh: '绿' }, grad1: '#a5c68f', grad2: '#7f9b6b' },
+            { label: { ja: '灰', zh: '灰' }, grad1: '#efefef', grad2: '#cfcfcf' },
+            { label: { ja: '白', zh: '白' }, grad1: '#ffffff', grad2: '#e0e0e0' }
+        ];
+
+        const translations = {
+            ja: {
+                lobbyTitle: '対局所',
+                displayNameLabel: '表示名',
+                displayNamePlaceholder: '例: kren1994',
+                roomCodeLabel: '合言葉',
+                roomCodePlaceholder: '例: apple123',
+                joinRoom: '入室',
+                chatTitle: 'チャット',
+                chatPlaceholder: 'コメントを書く',
+                chatSend: '投稿',
+                spectatorTitle: '観戦席',
+                infoTitle: '対局情報',
+                minute: '分',
+                second: '秒',
+                spectatorEmpty: 'まだ部屋に参加者はいません。',
+                spectatorNone: '観戦者はいません。',
+                menuTakeback: '待った',
+                menuDraw: '満局提案',
+                menuResign: '終局',
+                menuLang: '言語',
+                menuSound: '効果音',
+                menuCoords: '座標',
+                menuTheme: '盤面色',
+                menuMoveNum: '手数',
+                actionDialogChoice2: '10 題',
+                actionDialogSwap: 'Swap',
+                actionDialogRegular: 'そのまま',
+                drawDecline: '拒否',
+                drawAccept: '満局合意',
+                takebackDecline: '拒否',
+                takebackAccept: '待った合意',
+                resignCancel: 'キャンセル',
+                resignConfirm: '終局',
+                playerNotJoined: ' ',
+                readyAriaTitle: '準備 OK',
+                readyAriaCancel: '準備 OK を解除',
+                
+                errNeedRoomCode: '合言葉を入力してください。',
+                errReviewOnlyAfter: '対局終了後のみ局後検討できます。',
+                errReviewOnlyParticipant: '部屋参加者のみ局後検討できます。',
+                errReviewOccupied: 'その交点にはすでに石があります。',
+                errReviewNoUndo: '戻せる手がありません。',
+                errInvalidSeat: '不正な席です。',
+                errSeatOccupied: 'この席には座れません。',
+                errChangeTimePlaying: '対局中は持ち時間を変更できません。',
+                errNeedComment: 'コメントを入力してください。',
+                errConnectionLost: 'ホストとの接続が切れました。',
+                errCommError: '通信中にエラーが発生しました。',
+                errNotYourTurnBoard: 'いまは自分の操作タイミングではありません。',
+                errOfferOccupied: 'すでに石がある交点は候補にできません。',
+                errOfferDuplicated: '同じ候補は重複できません。',
+                errOfferSymmetric: '対称形の候補は提示できません。',
+                errNotYourTurn: 'いまは相手の手番です。',
+                errNotBoardAction: '現在は盤上着手のタイミングではありません。',
+                errConstraintOut: 'その交点は現在の Taraguchi-10 制限外です。',
+                errCannotSwap: 'いまは swap を選べません。',
+                errNotSwapTurn: 'いまは相手が選択する番です。',
+                errCannotChoice: 'いまは 10 題提示を選べません。',
+                errOnlyBlackChoice: 'Choice を選べるのは黒番だけです。',
+                errNotOfferPhase: 'いまは候補提示の段階ではありません。',
+                errOnlyBlackOffer: '候補を提示できるのは黒番だけです。',
+                errNotSelectPhase: 'いまは候補選択ではありません。',
+                errOnlyWhiteSelect: '候補を選ぶのは白番だけです。',
+                errSelectFromOffers: '提示された候補を選んでください。',
+                errDrawPlayingOnly: '対局中のみ満局提案できます。',
+                errDrawPlayerOnly: '対局者だけが満局提案できます。',
+                errDrawNotYourTurn: '自分の番には満局提案できません。',
+                errDrawNoOpponent: '相手がいません。',
+                errDrawAlready: 'すでに満局提案中です。',
+                errDrawCannotRespond: 'いまは満局提案に応答できません。',
+                errDrawNoOffer: '確認待ちの満局提案はありません。',
+                errDrawOnlyOpponentRespond: '相手だけが満局提案に応答できます。',
+                errTakebackPlayingOnly: '対局中のみ待ったできます。',
+                errTakebackPlayerOnly: '対局者だけが待ったできます。',
+                errTakebackNoOpponent: '相手がいません。',
+                errTakebackTooEarly: '6手目までは待ったできません。',
+                errTakebackAlready: 'すでに待った確認中です。',
+                errTakebackCannotRespond: 'いまは待ったに応答できません。',
+                errTakebackNoOffer: '確認待ちの待ったはありません。',
+                errTakebackOnlyOpponentRespond: '相手だけが待ったに応答できます。',
+                errResignPlayingOnly: '対局中のみ終局できます。',
+                errResignPlayerOnly: '対局者だけが終局できます。',
+                errOnlyEmptySeat: '自分では空いている席にのみ着席できます。',
+                errNotReadyState: '準備状態を変更できません。',
+                errReadyPlayerOnly: '対局席のユーザだけが準備 OK を切り替えられます。',
+                errReadyNotPlaying: '対局中は準備 OK を変更できません。',
+                errUnconnected: '接続が確立していません。',
+                errNoHostConnection: 'ホストとの接続がありません。',
+                msgRoomCreated: '部屋を作成中',
+                msgRoomConnecting: '部屋へ接続中',
+                msgRoomSyncing: '同期中',
+                msgRoomGuestConnecting: '観戦者接続中',
+                msgRoomConnected: '接続中',
+                msgRoomClosed: '接続終了',
+                msgLeftRoom: '接続を閉じました。',
+                chatNoMessages: 'チャットはまだありません。',
+                msgDrawOffered: '満局提案しました。',
+                msgTakebackRequested: '待った申請しました。',
+                msgJoined: (name) => `${name} が入室しました。`,
+                msgLeft: (name) => `${name} が退室しました。`,
+                msgDisconnected: (name) => `${name} の接続が切れました。復帰を待っています。`,
+                msgReconnected: (name) => `${name} が復帰しました。`,
+                msgDisconnectTimeout: (name) => `${name} が時間内に復帰できませんでした。`,
+                playerDisconnected: (seconds) => `切断中 ${seconds}秒`,
+                errMatchPausedForDisconnect: '相手の再接続待ちです。',
+                msgWin: (name) => `${name} の勝ちです。`,
+                msgDraw: '引き分けになりました。',
+                msgTimeout: (name) => `${name} が時間切れになりました。`
+            },
+            zh: {
+                lobbyTitle: '联机对战',
+                displayNameLabel: '昵称',
+                displayNamePlaceholder: '例: kren1994',
+                roomCodeLabel: '口令',
+                roomCodePlaceholder: '例: apple123',
+                joinRoom: '进入',
+                chatTitle: '聊天',
+                chatPlaceholder: '输入评论',
+                chatSend: '发送',
+                spectatorTitle: '观战席',
+                infoTitle: '对局信息',
+                minute: '分',
+                second: '秒',
+                spectatorEmpty: '房间里还没有人。',
+                spectatorNone: '没有观战者。',
+                menuTakeback: '悔棋',
+                menuDraw: '提和',
+                menuResign: '终局',
+                menuLang: '语言',
+                menuSound: '音效',
+                menuCoords: '坐标',
+                menuTheme: '棋盘色',
+                menuMoveNum: '手数',
+                actionDialogChoice2: '10 题',
+                actionDialogSwap: 'Swap',
+                actionDialogRegular: '不交换',
+                drawDecline: '拒绝',
+                drawAccept: '同意和棋',
+                takebackDecline: '拒绝',
+                takebackAccept: '同意悔棋',
+                resignCancel: '取消',
+                resignConfirm: '终局',
+                playerNotJoined: ' ',
+                readyAriaTitle: '准备完毕',
+                readyAriaCancel: '取消准备',
+                
+                errNeedRoomCode: '请输入口令。',
+                errReviewOnlyAfter: '对局结束后才可进行复盘。',
+                errReviewOnlyParticipant: '仅房间参与者可进行复盘。',
+                errReviewOccupied: '该交叉点已有棋子。',
+                errReviewNoUndo: '没有可撤销的落子。',
+                errInvalidSeat: '无效的座位。',
+                errSeatOccupied: '该座位已被占用。',
+                errChangeTimePlaying: '对局中无法修改时间。',
+                errNeedComment: '请输入评论内容。',
+                errConnectionLost: '与主机的连接已断开。',
+                errCommError: '通信过程中发生错误。',
+                errNotYourTurnBoard: '现在不是你的操作回合。',
+                errOfferOccupied: '该交叉点已有棋子，不能作为候选点。',
+                errOfferDuplicated: '候选点不能重复。',
+                errOfferSymmetric: '不能提示对称的候选点。',
+                errNotYourTurn: '现在是对方的回合。',
+                errNotBoardAction: '现在不是在棋盘上落子的时机。',
+                errConstraintOut: '该点在当前的 Taraguchi-10 限制范围外。',
+                errCannotSwap: '现在无法选择 Swap。',
+                errNotSwapTurn: '现在轮到对方选择。',
+                errCannotChoice: '现在无法选择 10 题打点。',
+                errOnlyBlackChoice: '只有黑方可以选择分支。',
+                errNotOfferPhase: '现在不是提示候选点的阶段。',
+                errOnlyBlackOffer: '只有黑方可以提示候选点。',
+                errNotSelectPhase: '现在不是选择候选点的阶段。',
+                errOnlyWhiteSelect: '只有白方可以选择候选点。',
+                errSelectFromOffers: '请从提示的候选点中选择。',
+                errDrawPlayingOnly: '仅在对局中可以提和。',
+                errDrawPlayerOnly: '仅对局者可以提和。',
+                errDrawNotYourTurn: '在你的回合无法提和。',
+                errDrawNoOpponent: '没有对手。',
+                errDrawAlready: '已经发起过提和了。',
+                errDrawCannotRespond: '现在无法回应提和请求。',
+                errDrawNoOffer: '没有等待确认的提和请求。',
+                errDrawOnlyOpponentRespond: '仅对手可以回应提和请求。',
+                errTakebackPlayingOnly: '仅在对局中可以悔棋。',
+                errTakebackPlayerOnly: '仅对局者可以悔棋。',
+                errTakebackNoOpponent: '没有对手。',
+                errTakebackTooEarly: '第 6 手之前不能悔棋。',
+                errTakebackAlready: '已经在等待悔棋确认。',
+                errTakebackCannotRespond: '现在无法回应悔棋请求。',
+                errTakebackNoOffer: '没有等待确认的悔棋请求。',
+                errTakebackOnlyOpponentRespond: '仅对手可以回应提和请求。',
+                errResignPlayingOnly: '仅在对局中可以终局。',
+                errResignPlayerOnly: '仅对局者可以终局。',
+                errOnlyEmptySeat: '只能入座空位。',
+                errNotReadyState: '无法更改准备状态。',
+                errReadyPlayerOnly: '仅对局席的玩家可以切换准备状态。',
+                errReadyNotPlaying: '对局中无法更改准备状态。',
+                errUnconnected: '连接尚未建立。',
+                errNoHostConnection: '未连接到主机。',
+                msgRoomCreated: '创建房间中',
+                msgRoomConnecting: '连接房间中',
+                msgRoomSyncing: '同步中',
+                msgRoomGuestConnecting: '观战者连接中',
+                msgRoomConnected: '已连接',
+                msgRoomClosed: '连接结束',
+                msgLeftRoom: '已关闭连接。',
+                chatNoMessages: '还没有聊天记录。',
+                msgDrawOffered: '已提出和棋。',
+                msgTakebackRequested: '已申请悔棋。',
+                msgJoined: (name) => `${name} 进入了房间。`,
+                msgLeft: (name) => `${name} 退出了房间。`,
+                msgDisconnected: (name) => `${name} 的连接已断开，正在等待重连。`,
+                msgReconnected: (name) => `${name} 已重新连接。`,
+                msgDisconnectTimeout: (name) => `${name} 未能在限定时间内重连。`,
+                playerDisconnected: (seconds) => `断线中 ${seconds}秒`,
+                errMatchPausedForDisconnect: '正在等待对手重新连接。',
+                msgWin: (name) => `${name} 获胜。`,
+                msgDraw: '和棋。',
+                msgTimeout: (name) => `${name} 超时。`
+            }
+        };
+
+        function i18n(key, arg) {
+            const lang = translations[currentLanguage] || translations['ja'];
+            const val = lang[key] || translations['ja'][key] || key;
+            if (typeof val === 'function') return val(arg);
+            return val;
+        }
+
+        function applyLanguage() {
+            document.documentElement.lang = currentLanguage === 'zh' ? 'zh-CN' : 'ja';
+            elements.uiLobbyTitle.textContent = i18n('lobbyTitle');
+            elements.uiDisplayNameLabel.textContent = i18n('displayNameLabel');
+            elements.nameInput.placeholder = i18n('displayNamePlaceholder');
+            elements.uiRoomCodeLabel.textContent = i18n('roomCodeLabel');
+            elements.roomCodeInput.placeholder = i18n('roomCodePlaceholder');
+            elements.joinRoomBtn.textContent = i18n('joinRoom');
+            
+            elements.uiChatTitle.textContent = i18n('chatTitle');
+            elements.logCommentInput.placeholder = i18n('chatPlaceholder');
+            elements.sendLogCommentBtn.textContent = i18n('chatSend');
+            
+            elements.uiSpectatorTitle.textContent = i18n('spectatorTitle');
+            elements.uiInfoTitle.textContent = i18n('infoTitle');
+            
+            elements.uiMinute.textContent = i18n('minute');
+            elements.uiSecond.textContent = i18n('second');
+            
+            elements.menuDrawBtn.textContent = i18n('menuDraw');
+            elements.menuResignBtn.textContent = i18n('menuResign');
+            elements.menuTakebackBtn.textContent = i18n('menuTakeback');
+            document.getElementById('langBtn').childNodes[0].nodeValue = i18n('menuLang');
+            document.getElementById('soundBtn').childNodes[0].nodeValue = i18n('menuSound');
+            document.getElementById('coordsBtn').textContent = i18n('menuCoords');
+            document.getElementById('themeBtn').childNodes[0].nodeValue = i18n('menuTheme');
+            document.getElementById('moveNumBtn').textContent = i18n('menuMoveNum');
+            
+            elements.drawDeclineBtn.textContent = i18n('drawDecline');
+            elements.drawAcceptBtn.textContent = i18n('drawAccept');
+            elements.takebackDeclineBtn.textContent = i18n('takebackDecline');
+            elements.takebackAcceptBtn.textContent = i18n('takebackAccept');
+            
+            elements.resignCancelBtn.textContent = i18n('resignCancel');
+            elements.resignConfirmBtn.textContent = i18n('resignConfirm');
+            
+            render();
+        }
+
+        function setScreen(name) {
+            elements.lobbyScreen.hidden = name !== 'lobby';
+            elements.gameScreen.hidden = name !== 'game';
+            requestAnimationFrame(() => {
+                if (name === 'game') resizeBoard();
+            });
+        }
+
+        function sanitizeName(value) {
+            const fallback = 'Player';
+            const trimmed = String(value || '').trim().replace(/\s+/g, ' ');
+            return (trimmed || fallback).slice(0, 24);
+        }
+
+        function createToken() {
+            if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+                return window.crypto.randomUUID();
+            }
+            return `${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
+        }
+
+        function getLocalPlayerToken(roomCode) {
+            const storageKey = `${PLAYER_TOKEN_PREFIX}${roomCode}`;
+            try {
+                const existing = window.localStorage.getItem(storageKey);
+                if (existing) return existing;
+                const nextToken = createToken();
+                window.localStorage.setItem(storageKey, nextToken);
+                return nextToken;
+            } catch (error) {
+                return createToken();
+            }
+        }
+
+        function clamp(value, min, max) {
+            return Math.min(max, Math.max(min, value));
+        }
+
+        function nowIsoTime() {
+            return new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        }
+
+        function showToast(message) {
+            elements.toast.textContent = message;
+            elements.toast.classList.add('show');
+            window.clearTimeout(toastTimer);
+            toastTimer = window.setTimeout(() => {
+                elements.toast.classList.remove('show');
+            }, 2600);
+        }
+
+        function buildSettings() {
+            return {
+                baseSeconds: 5 * 60,
+                incrementSeconds: 5,
+                opening: 'taraguchi10',
+            };
+        }
+
+        function createInitialState(nextRoomId, hostId, hostName, settings, hostToken = '') {
+            const initialMs = settings.baseSeconds * 1000;
+            return {
+                roomId: nextRoomId,
+                config: settings,
+                hostPeerId: hostId,
+                joinOrder: [hostId],
+                participantsById: {
+                    [hostId]: { id: hostId, name: hostName, seat: 'black', isHost: true, token: hostToken },
+                },
+                seats: {
+                    black: hostId,
+                    white: null,
+                },
+                readyByPeerId: {
+                    [hostId]: false,
+                },
+                colorsByPeerId: { [hostId]: 'black' },
+                moves: [],
+                phase: 'waiting-guest',
+                opening: {
+                    variant: null,
+                    offeredMoves: [],
+                },
+                clocks: {
+                    remainingMsByPeerId: { [hostId]: initialMs },
+                    activePeerId: null,
+                    activeStartedAt: null,
+                },
+                status: 'waiting',
+                winnerId: null,
+                resultText: '',
+                drawOfferByPeerId: '',
+                takebackOfferByPeerId: '',
+                connectionPause: null,
+                reviewMoves: [],
+                reviewCursor: 0,
+                log: [createLogEntry('presence', i18n('msgJoined', hostName))],
+                version: 0,
+            };
+        }
+
+        function createLogEntry(kind, text) {
+            return {
+                id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                kind,
+                text,
+                time: nowIsoTime(),
+            };
+        }
+
+        function addLog(kind, text) {
+            if (!state) return null;
+            const entry = createLogEntry(kind, text);
+            if (!Array.isArray(state.log)) state.log = [];
+            state.log.unshift(entry);
+            state.log = state.log.slice(0, MAX_LOG_ITEMS);
+            return entry;
+        }
+
+        function addLogEntry(entry) {
+            if (!state || !entry) return;
+            if (!Array.isArray(state.log)) state.log = [];
+            if (state.log.some((item) => item.id === entry.id)) return;
+            state.log.unshift(entry);
+            state.log = state.log.slice(0, MAX_LOG_ITEMS);
+        }
+
+        function normalizeCommentText(value) {
+            return String(value || '').replace(/\s+/g, ' ').trim().slice(0, 140);
+        }
+
+        function getRenderedMoves() {
+            if (state?.status === 'finished') {
+                return (state.reviewMoves || []).slice(0, state.reviewCursor ?? (state.reviewMoves?.length || 0));
+            }
+            return state?.moves || [];
+        }
+
+        function createRequestId() {
+            return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        }
+
+        function clearPendingMove() {
+            pendingMove = null;
+        }
+
+        function setPendingMove(action) {
+            if (!state || !localPeerId || action.kind !== 'move') return;
+            pendingMove = {
+                x: action.x,
+                y: action.y,
+                color: getColorForPeer(localPeerId),
+                peerId: localPeerId,
+                number: (state.moves || []).length + 1,
+                requestId: action.requestId,
+            };
+            renderBoard();
+        }
+
+        function clearLocalOptimisticRequests() {
+            if (!state || !localPeerId) return;
+            if (state.drawOfferByPeerId === localPeerId) state.drawOfferByPeerId = '';
+            if (state.takebackOfferByPeerId === localPeerId) state.takebackOfferByPeerId = '';
+        }
+
+        function applyOptimisticRequest(kind) {
+            if (!state || !localPeerId) return true;
+            if (kind === 'draw') {
+                const error = getDrawRequestError(localPeerId);
+                if (error) {
+                    showToast(error);
+                    return false;
+                }
+                if (!state.drawOfferByPeerId) {
+                    state.drawOfferByPeerId = localPeerId;
+                    showToast(i18n('msgDrawOffered'));
+                    render();
+                }
+            }
+            if (kind === 'takeback') {
+                const error = getTakebackRequestError(localPeerId);
+                if (error) {
+                    showToast(error);
+                    return false;
+                }
+                state.takebackOfferByPeerId = localPeerId;
+                showToast(i18n('msgTakebackRequested'));
+                render();
+            }
+            return true;
+        }
+
+        function canUseReviewBoard() {
+            return Boolean(state && state.status === 'finished');
+        }
+
+        function resetReviewMoves() {
+            if (!state) return;
+            state.reviewMoves = state.status === 'finished'
+                ? (state.moves || []).map((move) => ({ ...move }))
+                : [];
+            state.reviewCursor = state.reviewMoves.length;
+        }
+
+        function resetReviewMovesForPeer(peerId) {
+            if (!canUseReviewBoard()) return i18n('errReviewOnlyAfter');
+            state.reviewMoves = (state.moves || []).map(m => ({...m}));
+            state.reviewCursor = state.reviewMoves.length;
+            return '';
+        }
+
+        function addReviewMove(peerId, x, y) {
+            if (!canUseReviewBoard()) return i18n('errReviewOnlyAfter');
+            if (!getParticipantById(peerId)) return i18n('errReviewOnlyParticipant');
+            
+            const cursor = state.reviewCursor ?? (state.reviewMoves || []).length;
+            const currentMoves = (state.reviewMoves || []).slice(0, cursor);
+            
+            if (currentMoves.some((move) => move.x === x && move.y === y)) {
+                return i18n('errReviewOccupied');
+            }
+
+            state.reviewMoves = currentMoves;
+            const nextColor = state.reviewMoves.length % 2 === 0 ? 'black' : 'white';
+            state.reviewMoves.push({
+                x,
+                y,
+                color: nextColor,
+                peerId,
+                number: state.reviewMoves.length + 1,
+                review: true,
+            });
+            state.reviewCursor = state.reviewMoves.length;
+            return '';
+        }
+        
+        function setReviewCursor(peerId, cursor) {
+            if (!canUseReviewBoard()) return i18n('errReviewOnlyAfter');
+            if (!getParticipantById(peerId)) return i18n('errReviewOnlyParticipant');
+            const max = (state.reviewMoves || []).length;
+            state.reviewCursor = Math.max(0, Math.min(max, cursor));
+            return '';
+        }
+
+        function getParticipantById(peerId) {
+            if (!state || !peerId) return null;
+            return state.participantsById?.[peerId] || null;
+        }
+
+        function isHostParticipant(participant) {
+            return Boolean(state && participant && participant.id === state.hostPeerId);
+        }
+
+        function getDisplayName(participant) {
+            if (!participant) return i18n('playerNotJoined');
+            return isHostParticipant(participant) ? `${participant.name}*` : participant.name;
+        }
+
+        function setHostPeerId(nextHostPeerId) {
+            if (!state) return;
+            state.hostPeerId = nextHostPeerId || '';
+            Object.values(state.participantsById || {}).forEach((participant) => {
+                if (!participant) return;
+                participant.isHost = Boolean(nextHostPeerId) && participant.id === nextHostPeerId;
+            });
+        }
+
+        function ensureJoinOrderContains(peerId) {
+            if (!state || !peerId) return;
+            if (!Array.isArray(state.joinOrder)) state.joinOrder = [];
+            if (!state.joinOrder.includes(peerId)) state.joinOrder.push(peerId);
+        }
+
+        function removeFromJoinOrder(peerId) {
+            if (!state || !Array.isArray(state.joinOrder)) return;
+            state.joinOrder = state.joinOrder.filter((id) => id !== peerId);
+        }
+
+        function getNextHostCandidatePeerId(fromPeerId) {
+            if (!state) return '';
+            const order = Array.isArray(state.joinOrder) && state.joinOrder.length
+                ? state.joinOrder.slice()
+                : Object.keys(state.participantsById || {});
+            if (!order.length) return '';
+            const hostIndex = order.indexOf(fromPeerId);
+            const startIndex = hostIndex >= 0 ? hostIndex : -1;
+            for (let step = 1; step <= order.length; step += 1) {
+                const idx = (startIndex + step + order.length) % order.length;
+                const candidateId = order[idx];
+                if (!candidateId || candidateId === fromPeerId) continue;
+                const participant = getParticipantById(candidateId);
+                if (!participant) continue;
+                if (isParticipantDisconnected(participant)) continue;
+                return candidateId;
+            }
+            return '';
+        }
+
+        function isParticipantDisconnected(participant) {
+            return Boolean(participant && participant.disconnectedAt);
+        }
+
+        function getDisconnectedRemainingSeconds(participant) {
+            if (!isParticipantDisconnected(participant)) return 0;
+            const remaining = Math.max(0, (participant.disconnectedUntil || 0) - Date.now());
+            return Math.ceil(remaining / 1000);
+        }
+
+        function hasDisconnectedSeatedPlayer() {
+            if (!state) return false;
+            return [state.seats.black, state.seats.white].some((peerId) => {
+                const participant = getParticipantById(peerId);
+                return isParticipantDisconnected(participant);
+            });
+        }
+
+        function getSeatedParticipantByToken(token) {
+            if (!state || !token) return null;
+            return Object.values(state.participantsById || {}).find((participant) => {
+                return participant
+                    && participant.token === token
+                    && participant.disconnectedAt
+                    && (participant.seat === 'black' || participant.seat === 'white');
+            }) || null;
+        }
+
+        function replacePeerIdReferences(oldPeerId, nextPeerId) {
+            if (!state || !oldPeerId || !nextPeerId || oldPeerId === nextPeerId) return;
+
+            const participant = state.participantsById[oldPeerId];
+            if (participant) {
+                delete state.participantsById[oldPeerId];
+                participant.id = nextPeerId;
+                state.participantsById[nextPeerId] = participant;
+            }
+
+            if (state.hostPeerId === oldPeerId) state.hostPeerId = nextPeerId;
+            if (state.seats.black === oldPeerId) state.seats.black = nextPeerId;
+            if (state.seats.white === oldPeerId) state.seats.white = nextPeerId;
+            if (state.clocks.activePeerId === oldPeerId) state.clocks.activePeerId = nextPeerId;
+            if (state.drawOfferByPeerId === oldPeerId) state.drawOfferByPeerId = nextPeerId;
+            if (state.takebackOfferByPeerId === oldPeerId) state.takebackOfferByPeerId = nextPeerId;
+            if (state.connectionPause?.peerId === oldPeerId) state.connectionPause.peerId = nextPeerId;
+            if (state.connectionPause?.activePeerId === oldPeerId) state.connectionPause.activePeerId = nextPeerId;
+
+            for (const collectionName of ['colorsByPeerId', 'readyByPeerId']) {
+                const collection = state[collectionName];
+                if (collection && Object.prototype.hasOwnProperty.call(collection, oldPeerId)) {
+                    collection[nextPeerId] = collection[oldPeerId];
+                    delete collection[oldPeerId];
+                }
+            }
+
+            if (state.clocks.remainingMsByPeerId && Object.prototype.hasOwnProperty.call(state.clocks.remainingMsByPeerId, oldPeerId)) {
+                state.clocks.remainingMsByPeerId[nextPeerId] = state.clocks.remainingMsByPeerId[oldPeerId];
+                delete state.clocks.remainingMsByPeerId[oldPeerId];
+            }
+
+            for (const move of state.moves || []) {
+                if (move.peerId === oldPeerId) move.peerId = nextPeerId;
+            }
+            for (const move of state.reviewMoves || []) {
+                if (move.peerId === oldPeerId) move.peerId = nextPeerId;
+            }
+            if (Array.isArray(state.joinOrder)) {
+                state.joinOrder = state.joinOrder.map((peerId) => (peerId === oldPeerId ? nextPeerId : peerId));
+            }
+        }
+
+        function getPeerName(peerId) {
+            const participant = getParticipantById(peerId);
+            return participant ? participant.name : i18n('playerNotJoined');
+        }
+
+        function getBlackPeerId() {
+            return state?.seats?.black || '';
+        }
+
+        function getWhitePeerId() {
+            return state?.seats?.white || '';
+        }
+
+        function getColorForPeer(peerId) {
+            return state?.colorsByPeerId?.[peerId] || '';
+        }
+
+        function getOpponentPeerId(peerId) {
+            if (!state || !peerId) return '';
+            const ids = [state.seats.black, state.seats.white].filter(Boolean);
+            return ids.find((id) => id !== peerId) || '';
+        }
+
+        function bothPlayersReady() {
+            return Boolean(state?.seats?.black && state?.seats?.white && state.seats.black !== state.seats.white);
+        }
+
+        function seatedPlayersMarkedReady() {
+            if (!bothPlayersReady()) return false;
+            return Boolean(state.readyByPeerId?.[state.seats.black] && state.readyByPeerId?.[state.seats.white]);
+        }
+
+        function resetReadyFlags() {
+            if (!state) return;
+            if (state.seats.black) state.readyByPeerId[state.seats.black] = false;
+            if (state.seats.white) state.readyByPeerId[state.seats.white] = false;
+        }
+
+        function clearBoardForNewMatch() {
+            if (!state) return;
+            state.moves = [];
+            state.reviewMoves = [];
+            state.reviewCursor = 0;
+            state.opening = {
+                variant: null,
+                offeredMoves: [],
+            };
+            state.winnerId = null;
+            state.resultText = '';
+            state.drawOfferByPeerId = '';
+            state.takebackOfferByPeerId = '';
+            state.connectionPause = null;
+            state.clocks.remainingMsByPeerId = {};
+            Object.values(state.participantsById || {}).forEach((participant) => {
+                state.clocks.remainingMsByPeerId[participant.id] = state.config.baseSeconds * 1000;
+            });
+            stopClock();
+        }
+
+        function rebuildColors() {
+            if (!state) return;
+            state.colorsByPeerId = {};
+            if (state.seats.black) state.colorsByPeerId[state.seats.black] = 'black';
+            if (state.seats.white) state.colorsByPeerId[state.seats.white] = 'white';
+        }
+
+        function ensureClockEntry(peerId) {
+            if (!state || !peerId) return;
+            if (state.clocks.remainingMsByPeerId[peerId] == null) {
+                state.clocks.remainingMsByPeerId[peerId] = state.config.baseSeconds * 1000;
+            }
+            if (state.readyByPeerId[peerId] == null) {
+                state.readyByPeerId[peerId] = false;
+            }
+        }
+
+        function canSelfChangeSeat(peerId, nextSeat) {
+            if (!state || !peerId) return false;
+            const participant = getParticipantById(peerId);
+            if (!participant) return false;
+            if (nextSeat === 'spectator') return true;
+            if (nextSeat !== 'black' && nextSeat !== 'white') return false;
+            const occupant = state.seats[nextSeat];
+            return !occupant || occupant === peerId;
+        }
+
+        function assignSeat(targetPeerId, nextSeat, options = {}) {
+            if (!state) return i18n('errUnconnected');
+            const participant = getParticipantById(targetPeerId);
+            if (!participant) return '';
+            if (!['black', 'white', 'spectator'].includes(nextSeat)) return i18n('errInvalidSeat');
+
+            const currentSeat = participant.seat || 'spectator';
+            if (currentSeat === nextSeat) return '';
+
+            const beforeSeatedIds = [state.seats.black, state.seats.white].filter(Boolean);
+            const affectedActiveSeat = state.status === 'playing' && (currentSeat !== 'spectator' || nextSeat !== 'spectator');
+
+            if (currentSeat === 'black') state.seats.black = null;
+            if (currentSeat === 'white') state.seats.white = null;
+            state.readyByPeerId[targetPeerId] = false;
+
+            if (nextSeat === 'black' || nextSeat === 'white') {
+                const displacedPeerId = state.seats[nextSeat];
+                if (displacedPeerId && displacedPeerId !== targetPeerId && state.participantsById[displacedPeerId]) {
+                    state.participantsById[displacedPeerId].seat = 'spectator';
+                    state.readyByPeerId[displacedPeerId] = false;
+                }
+                state.seats[nextSeat] = targetPeerId;
+            }
+
+            participant.seat = nextSeat;
+            rebuildColors();
+            ensureClockEntry(targetPeerId);
+
+            if (affectedActiveSeat && state.status === 'playing' && state.moves.length > 0) {
+                finishGame('', ''); 
+                return '';
+            }
+
+            if (!bothPlayersReady()) {
+                state.phase = 'waiting-guest';
+                state.status = 'waiting';
+                stopClock();
+                return '';
+            }
+
+            const afterSeatedIds = [state.seats.black, state.seats.white].filter(Boolean);
+            const seatingChanged = beforeSeatedIds.join(':') !== afterSeatedIds.join(':');
+            if (seatingChanged) {
+                resetReadyFlags();
+                state.phase = 'waiting-guest';
+                state.status = 'waiting';
+                stopClock();
+            }
+            return '';
+        }
+
+        function pauseMatchForDisconnect(peerId) {
+            if (!state || state.status !== 'playing') return;
+            const activePeerId = state.clocks.activePeerId;
+            applyElapsedTime();
+            state.connectionPause = { peerId, activePeerId };
+            stopClock();
+        }
+
+        function resumeMatchAfterReconnect() {
+            if (!state || state.status !== 'playing' || !state.connectionPause) return;
+            if (hasDisconnectedSeatedPlayer()) return;
+            const activePeerId = state.connectionPause.activePeerId || phaseDescriptor().actorPeerId;
+            state.connectionPause = null;
+            if (activePeerId) {
+                startClockFor(activePeerId);
+            }
+        }
+
+        function preserveDisconnectedParticipant(peerId) {
+            if (!state || !peerId) return false;
+            const participant = getParticipantById(peerId);
+            if (!participant) return false;
+            const wasSeated = participant.seat === 'black' || participant.seat === 'white';
+            if (!wasSeated || state.status !== 'playing' || state.moves.length === 0) return false;
+            if (participant.disconnectedAt) return true;
+
+            participant.disconnectedAt = Date.now();
+            participant.disconnectedUntil = participant.disconnectedAt + DISCONNECT_GRACE_MS;
+            pauseMatchForDisconnect(peerId);
+            addLog('presence', i18n('msgDisconnected', participant.name));
+            return true;
+        }
+
+        function reconnectDisconnectedParticipant(oldPeerId, nextPeerId, nextName, token) {
+            const previousParticipant = getParticipantById(oldPeerId);
+            const wasSeated = Boolean(previousParticipant && (previousParticipant.seat === 'black' || previousParticipant.seat === 'white'));
+            const wasMarkedDisconnected = Boolean(previousParticipant && previousParticipant.disconnectedAt);
+            const oldConnection = guestConnections.get(oldPeerId);
+            if (oldConnection) {
+                if (wasSeated && !wasMarkedDisconnected) {
+                    addLog('presence', i18n('msgDisconnected', previousParticipant.name));
+                }
+                suppressedConnectionClosePeers.add(oldPeerId);
+                guestConnections.delete(oldPeerId);
+                try { oldConnection.close(); } catch (error) { }
+            }
+            replacePeerIdReferences(oldPeerId, nextPeerId);
+            const participant = getParticipantById(nextPeerId);
+            if (!participant) return null;
+            participant.name = nextName || participant.name;
+            participant.token = token || participant.token;
+            delete participant.disconnectedAt;
+            delete participant.disconnectedUntil;
+            ensureClockEntry(nextPeerId);
+            rebuildColors();
+            resumeMatchAfterReconnect();
+            addLog('presence', i18n('msgReconnected', participant.name));
+            return participant;
+        }
+
+        function removeParticipant(peerId, reasonText = '') {
+            if (!state || !peerId) return;
+            const participant = getParticipantById(peerId);
+            if (!participant) return;
+            const wasSeated = participant.seat === 'black' || participant.seat === 'white';
+            if (participant.seat === 'black') state.seats.black = null;
+            if (participant.seat === 'white') state.seats.white = null;
+            delete state.participantsById[peerId];
+            delete state.colorsByPeerId[peerId];
+            delete state.clocks.remainingMsByPeerId[peerId];
+            delete state.readyByPeerId[peerId];
+            removeFromJoinOrder(peerId);
+            
+            if (reasonText) addLog('system', reasonText);
+            
+            if (wasSeated && state.status === 'playing' && state.moves.length > 0) {
+                finishGame('', '');
+            } else if (!bothPlayersReady()) {
+                state.phase = 'waiting-guest';
+                state.status = 'waiting';
+                stopClock();
+            }
+        }
+
+        function clearHostReconnectTimer() {
+            if (!hostReconnectTimer) return;
+            window.clearTimeout(hostReconnectTimer);
+            hostReconnectTimer = 0;
+        }
+
+        function attemptGuestReconnectToHost() {
+            if (localMode !== 'guest' || !peer || !roomId) return;
+            if (hostConnection && hostConnection.open) return;
+            try {
+                hostConnection = peer.connect(roomId, {
+                    reliable: true,
+                    metadata: {
+                        name: sanitizeName(elements.nameInput.value || 'Player'),
+                        token: localPlayerToken,
+                    },
+                });
+                wireConnectionHandlers(hostConnection);
+            } catch (error) {
+                scheduleGuestReconnect();
+            }
+        }
+
+        function scheduleGuestReconnect(delayMs = 650) {
+            clearHostReconnectTimer();
+            hostReconnectTimer = window.setTimeout(() => {
+                hostReconnectTimer = 0;
+                attemptGuestReconnectToHost();
+            }, delayMs);
+        }
+
+        function beginHostTakeover(previousHostId) {
+            if (!state || hostTakeoverInProgress) return;
+            hostTakeoverInProgress = true;
+            clearHostReconnectTimer();
+            const localCandidateId = localPeerId;
+            const previousHost = getParticipantById(previousHostId);
+
+            if (previousHost) {
+                const placeholderId = `host-disconnected-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+                replacePeerIdReferences(previousHostId, placeholderId);
+                const placeholder = getParticipantById(placeholderId);
+                if (placeholder) {
+                    placeholder.isHost = false;
+                    if (!placeholder.disconnectedAt) {
+                        placeholder.disconnectedAt = Date.now();
+                        placeholder.disconnectedUntil = placeholder.disconnectedAt + DISCONNECT_GRACE_MS;
+                    }
+                }
+            }
+
+            replacePeerIdReferences(localCandidateId, roomId);
+            setHostPeerId(roomId);
+            const localParticipant = getParticipantById(roomId);
+            if (localParticipant) {
+                localParticipant.name = sanitizeName(elements.nameInput.value || localParticipant.name || 'Player');
+                localParticipant.token = localPlayerToken || localParticipant.token;
+                delete localParticipant.disconnectedAt;
+                delete localParticipant.disconnectedUntil;
+            }
+
+            localMode = 'host';
+            localPeerId = roomId;
+
+            if (hostConnection) {
+                try { hostConnection.close(); } catch (error) { }
+                hostConnection = null;
+            }
+            if (peer) {
+                try { peer.destroy(); } catch (error) { }
+                peer = null;
+            }
+            const startHostTakeoverPeer = () => {
+                if (localMode !== 'host') return;
+                peer = new Peer(roomId);
+                peer.on('open', (id) => {
+                    localMode = 'host';
+                    localPeerId = id;
+                    setConnectionLabel(i18n('msgRoomCreated'));
+                    elements.leaveRoomBtn.disabled = false;
+                    hostTakeoverInProgress = false;
+                    broadcastState();
+                    render();
+                });
+                peer.on('connection', (incoming) => {
+                    if (localMode !== 'host') return;
+                    if (!state) {
+                        incoming.on('open', () => incoming.send({ type: 'reject', message: 'Not initialized.' }));
+                        incoming.on('open', () => incoming.close());
+                        return;
+                    }
+                    guestConnections.set(incoming.peer, incoming);
+                    wireConnectionHandlers(incoming);
+                });
+                peer.on('error', (error) => {
+                    if (error.type === 'unavailable-id') {
+                        try { peer.destroy(); } catch (destroyError) { }
+                        peer = null;
+                        setConnectionLabel(i18n('msgRoomSyncing'));
+                        window.setTimeout(() => {
+                            if (localMode === 'host' && hostTakeoverInProgress) {
+                                startHostTakeoverPeer();
+                            }
+                        }, 900);
+                        return;
+                    }
+                    hostTakeoverInProgress = false;
+                    showToast(`Error: ${error.type || error.message}`);
+                });
+            };
+
+            startHostTakeoverPeer();
+        }
+
+        function handleGuestHostDisconnect() {
+            if (localMode !== 'guest') return;
+            if (!state) {
+                showToast(i18n('errConnectionLost'));
+                resetAppState();
+                return;
+            }
+
+            const lostHostId = (state && state.hostPeerId) || roomId;
+            const lostHost = getParticipantById(lostHostId);
+            const isHostSeated = Boolean(lostHost && (lostHost.seat === 'black' || lostHost.seat === 'white'));
+            const shouldPreserveHost = Boolean(
+                lostHost && isHostSeated && state.status === 'playing' && (state.moves || []).length > 0
+            );
+
+            if (lostHost && shouldPreserveHost) {
+                if (!lostHost.disconnectedAt) {
+                    lostHost.disconnectedAt = Date.now();
+                    lostHost.disconnectedUntil = lostHost.disconnectedAt + DISCONNECT_GRACE_MS;
+                    pauseMatchForDisconnect(lostHost.id);
+                    addLog('presence', i18n('msgDisconnected', lostHost.name));
+                }
+            } else if (lostHost) {
+                removeParticipant(lostHost.id, i18n('msgLeft', lostHost.name));
+            }
+
+            const nextHostPeerId = getNextHostCandidatePeerId(lostHostId);
+            if (!nextHostPeerId) {
+                setConnectionLabel(i18n('msgRoomSyncing'));
+                scheduleGuestReconnect(1200);
+                render();
+                return;
+            }
+
+            setHostPeerId(nextHostPeerId);
+
+            if (nextHostPeerId === localPeerId) {
+                beginHostTakeover(lostHostId);
+            } else {
+                setConnectionLabel(i18n('msgRoomSyncing'));
+                scheduleGuestReconnect();
+            }
+            render();
+        }
+
+        function formatTime(ms) {
+            const safe = Math.max(0, ms);
+            const minutes = Math.floor(safe / 60000);
+            const seconds = Math.floor((safe % 60000) / 1000);
+            return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
+
+        function getDisplayRemainingMs(peerId) {
+            if (!state || !peerId) return 0;
+            const base = state.clocks.remainingMsByPeerId[peerId] ?? state.config.baseSeconds * 1000;
+            if (state.status !== 'playing' || state.clocks.activePeerId !== peerId || !state.clocks.activeStartedAt) {
+                return base;
+            }
+            return Math.max(0, base - (Date.now() - state.clocks.activeStartedAt));
+        }
+
+        function applyElapsedTime(timestamp = Date.now()) {
+            if (!state || state.status !== 'playing') return;
+            const activePeerId = state.clocks.activePeerId;
+            const startedAt = state.clocks.activeStartedAt;
+            if (!activePeerId || !startedAt) return;
+            const elapsed = Math.max(0, timestamp - startedAt);
+            state.clocks.remainingMsByPeerId[activePeerId] = Math.max(
+                0,
+                (state.clocks.remainingMsByPeerId[activePeerId] ?? 0) - elapsed
+            );
+            state.clocks.activeStartedAt = timestamp;
+        }
+
+        function startClockFor(peerId, timestamp = Date.now()) {
+            if (!state || !peerId) {
+                stopClock();
+                return;
+            }
+            state.status = 'playing';
+            state.clocks.activePeerId = peerId;
+            state.clocks.activeStartedAt = timestamp;
+        }
+
+        function stopClock() {
+            if (!state) return;
+            state.clocks.activePeerId = null;
+            state.clocks.activeStartedAt = null;
+        }
+
+        function grantIncrement(peerId) {
+            if (!state || !peerId) return;
+            const increment = state.config.incrementSeconds * 1000;
+            state.clocks.remainingMsByPeerId[peerId] = (state.clocks.remainingMsByPeerId[peerId] ?? 0) + increment;
+        }
+
+        function swapColors() {
+            const blackPeerId = getBlackPeerId();
+            const whitePeerId = getWhitePeerId();
+            if (!blackPeerId || !whitePeerId) return;
+            state.seats.black = whitePeerId;
+            state.seats.white = blackPeerId;
+            if (state.participantsById[blackPeerId]) {
+                state.participantsById[blackPeerId].seat = 'white';
+            }
+            if (state.participantsById[whitePeerId]) {
+                state.participantsById[whitePeerId].seat = 'black';
+            }
+            rebuildColors();
+        }
+
+        function getImplicitMovePhase(phase) {
+            switch (phase) {
+                case 'swap-after-1': return 'opening-move-2';
+                case 'swap-after-2': return 'opening-move-3';
+                case 'swap-after-3': return 'opening-move-4';
+                case 'swap-after-4': return 'opening-move-5-choice1';
+                case 'swap-after-5': return 'opening-move-6-choice1';
+                default: return '';
+            }
+        }
+
+        function phaseDescriptor() {
+            if (!state) {
+                return {
+                    label: '',
+                    detail: '',
+                    actorPeerId: '',
+                    allowBoardAction: false,
+                    boardActionKind: '',
+                    constraint: null,
+                };
+            }
+            if (hasDisconnectedSeatedPlayer()) {
+                return { actorPeerId: '', allowBoardAction: false, boardActionKind: '', constraint: null };
+            }
+
+            const blackPeerId = getBlackPeerId();
+            const whitePeerId = getWhitePeerId();
+            const lastMove = state.moves[state.moves.length - 1];
+
+            switch (state.phase) {
+                case 'waiting-guest':
+                    return { actorPeerId: '', allowBoardAction: false, boardActionKind: '', constraint: null };
+                case 'opening-move-1':
+                    return { actorPeerId: blackPeerId, allowBoardAction: true, boardActionKind: 'move', constraint: { kind: 'center' } };
+                case 'swap-after-1':
+                case 'swap-after-2':
+                case 'swap-after-3':
+                case 'swap-after-5': {
+                    const implicitPhase = getImplicitMovePhase(state.phase);
+                    const currentActorPeerId = lastMove ? getOpponentPeerId(lastMove.peerId) : '';
+                    const savedPhase = state.phase;
+                    state.phase = implicitPhase;
+                    const implicitDescriptor = phaseDescriptor();
+                    state.phase = savedPhase;
+                    const actorPeerId = lastMove ? getOpponentPeerId(lastMove.peerId) : '';
+                    return {
+                        actorPeerId,
+                        allowBoardAction: Boolean(currentActorPeerId && implicitPhase),
+                        boardActionKind: implicitPhase ? 'move' : '',
+                        constraint: implicitDescriptor.constraint,
+                    };
+                }
+                case 'swap-after-4': {
+                    const implicitPhase = getImplicitMovePhase(state.phase);
+                    const savedPhase = state.phase;
+                    state.phase = implicitPhase;
+                    const implicitDescriptor = phaseDescriptor();
+                    state.phase = savedPhase;
+                    return {
+                        actorPeerId: blackPeerId,
+                        allowBoardAction: true,
+                        boardActionKind: 'move',
+                        constraint: implicitDescriptor.constraint,
+                    };
+                }
+                case 'opening-move-2':
+                    return { actorPeerId: whitePeerId, allowBoardAction: true, boardActionKind: 'move', constraint: { kind: 'square', radius: 1 } };
+                case 'opening-move-3':
+                    return { actorPeerId: blackPeerId, allowBoardAction: true, boardActionKind: 'move', constraint: { kind: 'square', radius: 2 } };
+                case 'opening-move-4':
+                    return { actorPeerId: whitePeerId, allowBoardAction: true, boardActionKind: 'move', constraint: { kind: 'square', radius: 3 } };
+                case 'opening-move-5-choice1':
+                    return { actorPeerId: blackPeerId, allowBoardAction: true, boardActionKind: 'move', constraint: { kind: 'square', radius: 4 } };
+                case 'opening-move-6-choice1':
+                    return { actorPeerId: whitePeerId, allowBoardAction: true, boardActionKind: 'move', constraint: { kind: 'anywhere' } };
+                case 'offering-choice2':
+                    return { actorPeerId: blackPeerId, allowBoardAction: true, boardActionKind: 'offer', constraint: { kind: 'offer-set' } };
+                case 'select-offer':
+                    return { actorPeerId: whitePeerId, allowBoardAction: true, boardActionKind: 'select-offer', constraint: { kind: 'select-offer' } };
+                case 'opening-move-6-choice2':
+                    return { actorPeerId: whitePeerId, allowBoardAction: true, boardActionKind: 'move', constraint: { kind: 'anywhere' } };
+                case 'regular': {
+                    const actorPeerId = lastMove ? getOpponentPeerId(lastMove.peerId) : blackPeerId;
+                    return { actorPeerId, allowBoardAction: true, boardActionKind: 'move', constraint: { kind: 'anywhere' } };
+                }
+                case 'finished':
+                    return { actorPeerId: '', allowBoardAction: false, boardActionKind: '', constraint: null };
+                default:
+                    return { actorPeerId: '', allowBoardAction: false, boardActionKind: '', constraint: null };
+            }
+        }
+
+        function setPhase(nextPhase, timestamp = Date.now()) {
+            if (!state) return;
+            state.phase = nextPhase;
+            if (nextPhase === 'waiting-guest') {
+                state.status = 'waiting';
+                stopClock();
+                return;
+            }
+            if (nextPhase === 'finished') {
+                state.status = 'finished';
+                stopClock();
+                return;
+            }
+            state.status = 'playing';
+            const descriptor = phaseDescriptor();
+            if (descriptor.actorPeerId) {
+                startClockFor(descriptor.actorPeerId, timestamp);
+            } else {
+                stopClock();
+            }
+        }
+
+        function maybeStartMatch() {
+            if (!state || !['waiting-guest', 'finished'].includes(state.phase) || !bothPlayersReady() || !seatedPlayersMarkedReady()) return;
+            clearBoardForNewMatch();
+            resetReadyFlags();
+            setPhase('opening-move-1');
+        }
+
+        function isOccupied(x, y) {
+            return state?.moves?.some((move) => move.x === x && move.y === y) || false;
+        }
+
+        function isInsideCenteredSquare(x, y, radius) {
+            return Math.abs(x - CENTER) <= radius && Math.abs(y - CENTER) <= radius;
+        }
+
+        function validateMoveConstraint(constraint, x, y) {
+            if (!constraint || constraint.kind === 'anywhere') return true;
+            if (constraint.kind === 'center') return x === CENTER && y === CENTER;
+            if (constraint.kind === 'square') return isInsideCenteredSquare(x, y, constraint.radius);
+            return true;
+        }
+
+        function getShapeHash(moves) {
+            let minHash = null;
+            for (let i = 0; i < 8; i++) {
+                const transformed = moves.map(m => {
+                    let tx, ty;
+                    switch (i) {
+                        case 0: tx = m.x; ty = m.y; break;
+                        case 1: tx = -m.y; ty = m.x; break;
+                        case 2: tx = -m.x; ty = -m.y; break;
+                        case 3: tx = m.y; ty = -m.x; break;
+                        case 4: tx = -m.x; ty = m.y; break;
+                        case 5: tx = m.y; ty = m.x; break;
+                        case 6: tx = m.x; ty = -m.y; break;
+                        case 7: tx = -m.y; ty = -m.x; break;
+                    }
+                    return { x: tx, y: ty, color: m.color };
+                });
+
+                let minX = Infinity;
+                let minY = Infinity;
+                for (const m of transformed) {
+                    if (m.x < minX) minX = m.x;
+                    if (m.y < minY) minY = m.y;
+                }
+
+                const normalized = transformed.map(m => ({
+                    x: m.x - minX,
+                    y: m.y - minY,
+                    color: m.color
+                }));
+
+                normalized.sort((a, b) => {
+                    if (a.x !== b.x) return a.x - b.x;
+                    if (a.y !== b.y) return a.y - b.y;
+                    return a.color.localeCompare(b.color);
+                });
+
+                const hash = normalized.map(m => `${m.color[0]}${m.x},${m.y}`).join(';');
+                if (minHash === null || hash < minHash) {
+                    minHash = hash;
+                }
+            }
+            return minHash;
+        }
+
+        function validateOfferMove(x, y) {
+            if (isOccupied(x, y)) {
+                return i18n('errOfferOccupied');
+            }
+            if (state.opening.offeredMoves.some((move) => move.x === x && move.y === y)) {
+                return i18n('errOfferDuplicated');
+            }
+            
+            const candidateMoves = state.moves.concat([{ x, y, color: 'black' }]);
+            const candidateHash = getShapeHash(candidateMoves);
+            
+            const isSymmetric = state.opening.offeredMoves.some(offer => {
+                const existingMoves = state.moves.concat([{ x: offer.x, y: offer.y, color: 'black' }]);
+                const existingHash = getShapeHash(existingMoves);
+                return candidateHash === existingHash;
+            });
+            
+            if (isSymmetric) {
+                return i18n('errOfferSymmetric');
+            }
+            return '';
+        }
+
+        function checkWinAt(x, y, color) {
+            const occupied = new Set(
+                state.moves
+                    .filter((move) => move.color === color)
+                    .map((move) => `${move.x},${move.y}`)
+            );
+            const directions = [
+                [1, 0], [0, 1], [1, 1], [1, -1],
+            ];
+            for (const [dx, dy] of directions) {
+                let count = 1;
+                for (const step of [-1, 1]) {
+                    let nx = x + dx * step;
+                    let ny = y + dy * step;
+                    while (occupied.has(`${nx},${ny}`)) {
+                        count += 1;
+                        nx += dx * step;
+                        ny += dy * step;
+                    }
+                }
+                if (count >= 5) return true;
+            }
+            return false;
+        }
+
+        function finishGame(winnerId, resultText) {
+            if (!state) return;
+            state.winnerId = winnerId || null;
+            state.resultText = resultText;
+            state.drawOfferByPeerId = '';
+            state.takebackOfferByPeerId = '';
+            state.connectionPause = null;
+            resetReadyFlags();
+            setPhase('finished');
+            resetReviewMoves();
+        }
+
+        function setReadyState(peerId, ready) {
+            if (!state || !peerId) return i18n('errNotReadyState');
+            const participant = getParticipantById(peerId);
+            if (!participant || (participant.seat !== 'black' && participant.seat !== 'white')) {
+                return i18n('errReadyPlayerOnly');
+            }
+            if (state.status === 'playing') {
+                return i18n('errReadyNotPlaying');
+            }
+            state.readyByPeerId[peerId] = Boolean(ready);
+            maybeStartMatch();
+            return '';
+        }
+
+        function placeMove(peerId, x, y, timestamp = Date.now()) {
+            const originalPhase = state?.phase || '';
+            const implicitPhase = getImplicitMovePhase(originalPhase);
+            if (implicitPhase) {
+                const swapDescriptor = phaseDescriptor();
+                if (peerId !== swapDescriptor.actorPeerId) {
+                    return i18n('errNotYourTurn');
+                }
+                state.phase = implicitPhase;
+            }
+
+            const descriptor = phaseDescriptor();
+            if (!descriptor.allowBoardAction || descriptor.boardActionKind !== 'move') {
+                if (implicitPhase) state.phase = originalPhase;
+                return i18n('errNotBoardAction');
+            }
+            if (peerId !== descriptor.actorPeerId) {
+                if (implicitPhase) state.phase = originalPhase;
+                return i18n('errNotYourTurn');
+            }
+            if (isOccupied(x, y)) {
+                if (implicitPhase) state.phase = originalPhase;
+                return i18n('errReviewOccupied');
+            }
+            if (!validateMoveConstraint(descriptor.constraint, x, y)) {
+                if (implicitPhase) state.phase = originalPhase;
+                return i18n('errConstraintOut');
+            }
+
+            applyElapsedTime(timestamp);
+            
+            const color = getColorForPeer(peerId);
+            const moveNumber = state.moves.length + 1;
+            state.moves.push({ x, y, color, peerId, number: moveNumber });
+            grantIncrement(peerId);
+
+            if (checkWinAt(x, y, color)) {
+                finishGame(peerId, i18n('msgWin', getPeerName(peerId)));
+                return '';
+            }
+
+            switch (state.phase) {
+                case 'opening-move-1': setPhase('swap-after-1', timestamp); break;
+                case 'opening-move-2': setPhase('swap-after-2', timestamp); break;
+                case 'opening-move-3': setPhase('swap-after-3', timestamp); break;
+                case 'opening-move-4': setPhase('swap-after-4', timestamp); break;
+                case 'opening-move-5-choice1': setPhase('swap-after-5', timestamp); break;
+                case 'opening-move-6-choice1':
+                case 'opening-move-6-choice2':
+                case 'regular': setPhase('regular', timestamp); break;
+                default: break;
+            }
+            return '';
+        }
+
+        function resolveSwap(peerId, shouldSwap, timestamp = Date.now()) {
+            const descriptor = phaseDescriptor();
+            if (!state || !state.phase.startsWith('swap-after-')) return i18n('errCannotSwap');
+            if (peerId !== descriptor.actorPeerId) return i18n('errNotSwapTurn');
+
+            applyElapsedTime(timestamp);
+            if (shouldSwap) {
+                swapColors();
+            }
+
+            if (state.phase === 'swap-after-1') setPhase('opening-move-2', timestamp);
+            if (state.phase === 'swap-after-2') setPhase('opening-move-3', timestamp);
+            if (state.phase === 'swap-after-3') setPhase('opening-move-4', timestamp);
+            if (state.phase === 'swap-after-4') setPhase('opening-move-5-choice1', timestamp);
+            if (state.phase === 'swap-after-5') setPhase('opening-move-6-choice1', timestamp);
+            return '';
+        }
+
+        function chooseBranch(peerId, branch, timestamp = Date.now()) {
+            const descriptor = phaseDescriptor();
+            if (state?.phase !== 'swap-after-4') return i18n('errCannotChoice');
+            if (peerId !== descriptor.actorPeerId) return i18n('errOnlyBlackChoice');
+            if (branch !== 'choice2') return '';
+
+            applyElapsedTime(timestamp);
+            state.opening.variant = branch;
+            state.opening.offeredMoves = [];
+            setPhase('offering-choice2', timestamp);
+            return '';
+        }
+
+        function offerMove(peerId, x, y, timestamp = Date.now()) {
+            const descriptor = phaseDescriptor();
+            if (state?.phase !== 'offering-choice2') return i18n('errNotOfferPhase');
+            if (peerId !== descriptor.actorPeerId) return i18n('errOnlyBlackOffer');
+            const error = validateOfferMove(x, y);
+            if (error) return error;
+
+            applyElapsedTime(timestamp);
+            state.opening.offeredMoves.push({ x, y });
+            
+            if (state.opening.offeredMoves.length >= 10) {
+                setPhase('select-offer', timestamp);
+            } else {
+                setPhase('offering-choice2', timestamp);
+            }
+            return '';
+        }
+
+        function selectOfferedMove(peerId, x, y, timestamp = Date.now()) {
+            const descriptor = phaseDescriptor();
+            if (state?.phase !== 'select-offer') return i18n('errNotSelectPhase');
+            if (peerId !== descriptor.actorPeerId) return i18n('errOnlyWhiteSelect');
+            const selected = state.opening.offeredMoves.find((move) => move.x === x && move.y === y);
+            if (!selected) return i18n('errSelectFromOffers');
+
+            applyElapsedTime(timestamp);
+            const blackPeerId = getBlackPeerId();
+            const moveNumber = state.moves.length + 1;
+            state.moves.push({ x: selected.x, y: selected.y, color: 'black', peerId: blackPeerId, number: moveNumber, offered: true });
+            state.opening.offeredMoves = [];
+            
+            if (checkWinAt(selected.x, selected.y, 'black')) {
+                finishGame(blackPeerId, i18n('msgWin', getPeerName(blackPeerId)));
+                return '';
+            }
+
+            setPhase('opening-move-6-choice2', timestamp);
+            return '';
+        }
+
+        function getDrawRequestError(peerId) {
+            if (!state || state.status !== 'playing') return i18n('errDrawPlayingOnly');
+            const participant = getParticipantById(peerId);
+            if (!participant || (participant.seat !== 'black' && participant.seat !== 'white')) {
+                return i18n('errDrawPlayerOnly');
+            }
+            const descriptor = phaseDescriptor();
+            if (descriptor.actorPeerId === peerId) {
+                return i18n('errDrawNotYourTurn');
+            }
+
+            const opponentPeerId = getOpponentPeerId(peerId);
+            if (!opponentPeerId) return i18n('errDrawNoOpponent');
+
+            if (state.drawOfferByPeerId === peerId) {
+                return i18n('errDrawAlready');
+            }
+            return '';
+        }
+
+        function offerDraw(peerId) {
+            const requestError = getDrawRequestError(peerId);
+            if (requestError) return requestError;
+            const opponentPeerId = getOpponentPeerId(peerId);
+
+            if (state.drawOfferByPeerId === opponentPeerId) {
+                finishGame('', i18n('msgDraw'));
+                return '';
+            }
+
+            state.drawOfferByPeerId = peerId;
+            return '';
+        }
+
+        function respondDraw(peerId, accept) {
+            if (!state || state.status !== 'playing') return i18n('errDrawCannotRespond');
+            const offerPeerId = state.drawOfferByPeerId;
+            if (!offerPeerId) return i18n('errDrawNoOffer');
+            const opponentPeerId = getOpponentPeerId(offerPeerId);
+            if (peerId !== opponentPeerId) return i18n('errDrawOnlyOpponentRespond');
+
+            if (accept) {
+                finishGame('', i18n('msgDraw'));
+                return '';
+            }
+
+            state.drawOfferByPeerId = '';
+            return '';
+        }
+
+        function getTakebackRequestError(peerId) {
+            if (!state || state.status !== 'playing') return i18n('errTakebackPlayingOnly');
+            const participant = getParticipantById(peerId);
+            if (!participant || (participant.seat !== 'black' && participant.seat !== 'white')) {
+                return i18n('errTakebackPlayerOnly');
+            }
+            if ((state.moves || []).length <= 6) return i18n('errTakebackTooEarly');
+            const opponentPeerId = getOpponentPeerId(peerId);
+            if (!opponentPeerId) return i18n('errTakebackNoOpponent');
+            if (state.takebackOfferByPeerId) return i18n('errTakebackAlready');
+            return '';
+        }
+
+        function requestTakeback(peerId) {
+            const requestError = getTakebackRequestError(peerId);
+            if (requestError) return requestError;
+            state.takebackOfferByPeerId = peerId;
+            return '';
+        }
+
+        function applyTakeback(peerId, timestamp = Date.now()) {
+            if (!state || !state.moves?.length) return;
+            applyElapsedTime(timestamp);
+            do {
+                state.moves.pop();
+            } while (state.moves.length && state.moves[state.moves.length - 1].peerId === peerId);
+            state.opening.offeredMoves = [];
+            state.drawOfferByPeerId = '';
+            state.takebackOfferByPeerId = '';
+            displayMoveCount = -1;
+            setPhase('regular', timestamp);
+        }
+
+        function respondTakeback(peerId, accept) {
+            if (!state || state.status !== 'playing') return i18n('errTakebackCannotRespond');
+            const offerPeerId = state.takebackOfferByPeerId;
+            if (!offerPeerId) return i18n('errTakebackNoOffer');
+            const opponentPeerId = getOpponentPeerId(offerPeerId);
+            if (peerId !== opponentPeerId) return i18n('errTakebackOnlyOpponentRespond');
+            if (!accept) {
+                state.takebackOfferByPeerId = '';
+                return '';
+            }
+            applyTakeback(offerPeerId);
+            return '';
+        }
+
+        function resignGame(peerId) {
+            if (!state || state.status !== 'playing') return i18n('errResignPlayingOnly');
+            const participant = getParticipantById(peerId);
+            if (!participant || (participant.seat !== 'black' && participant.seat !== 'white')) {
+                return i18n('errResignPlayerOnly');
+            }
+            const opponentPeerId = getOpponentPeerId(peerId);
+            finishGame(opponentPeerId, i18n('msgWin', getPeerName(opponentPeerId)));
+            return '';
+        }
+
+        function addComment(peerId, text) {
+            if (!state) return i18n('errUnconnected');
+            const participant = getParticipantById(peerId);
+            if (!participant) return i18n('errUnconnected');
+            const message = normalizeCommentText(text);
+            if (!message) return i18n('errNeedComment');
+            addLog('comment', `${participant.name}\n${message}`);
+            return '';
+        }
+
+        function applyHostAction(peerId, action) {
+            if (!state || !action) return;
+            let error = '';
+            const pausedBlockedActions = [
+                'move', 'swap', 'choice2', 'draw', 'draw-response', 'takeback', 'takeback-response',
+                'resign', 'offer', 'select-offer', 'ready'
+            ];
+            if (hasDisconnectedSeatedPlayer() && pausedBlockedActions.includes(action.kind)) {
+                error = i18n('errMatchPausedForDisconnect');
+            }
+
+            if (!error && action.kind === 'move') error = placeMove(peerId, action.x, action.y);
+            if (!error && action.kind === 'swap') error = resolveSwap(peerId, true);
+            if (!error && action.kind === 'choice2') error = chooseBranch(peerId, 'choice2');
+            if (!error && action.kind === 'draw') error = offerDraw(peerId);
+            if (!error && action.kind === 'draw-response') error = respondDraw(peerId, Boolean(action.accept));
+            if (!error && action.kind === 'takeback') error = requestTakeback(peerId);
+            if (!error && action.kind === 'takeback-response') error = respondTakeback(peerId, Boolean(action.accept));
+            if (!error && action.kind === 'resign') error = resignGame(peerId);
+            if (!error && action.kind === 'comment') error = addComment(peerId, action.text);
+            if (!error && action.kind === 'review-move') error = addReviewMove(peerId, action.x, action.y);
+            if (!error && action.kind === 'review-cursor') error = setReviewCursor(peerId, action.cursor);
+            if (!error && action.kind === 'review-undo') error = setReviewCursor(peerId, (state.reviewCursor ?? (state.reviewMoves || []).length) - 1);
+            if (!error && action.kind === 'review-reset') error = resetReviewMovesForPeer(peerId);
+            if (!error && action.kind === 'offer') error = offerMove(peerId, action.x, action.y);
+            if (!error && action.kind === 'select-offer') error = selectOfferedMove(peerId, action.x, action.y);
+            if (!error && action.kind === 'ready') error = setReadyState(peerId, Boolean(action.ready));
+            if (!error && action.kind === 'seat-change') {
+                const isHostOperator = peerId === state.hostPeerId;
+                const isSelfSeatChange = action.targetPeerId === peerId && canSelfChangeSeat(peerId, action.seat);
+                if (!isHostOperator && !isSelfSeatChange) {
+                    error = i18n('errOnlyEmptySeat');
+                } else {
+                    error = assignSeat(action.targetPeerId, action.seat);
+                }
+            }
+
+            if (error) {
+                if (peerId === localPeerId) showToast(error);
+                if (peerId !== localPeerId) {
+                    const targetConn = guestConnections.get(peerId);
+                    if (targetConn && targetConn.open) {
+                        targetConn.send({ type: 'notice', message: error });
+                    }
+                }
+                return;
+            }
+
+            if (['move', 'offer', 'select-offer', 'review-move'].includes(action.kind) && peerId !== localPeerId) {
+                playStoneSound(false);
+            }
+
+            if (['move', 'swap', 'choice2', 'offer', 'select-offer', 'takeback-response'].includes(action.kind)) {
+                displayMoveCount = -1;
+            }
+            if (['review-move', 'review-cursor', 'review-undo', 'review-reset'].includes(action.kind)) {
+                displayMoveCount = -1;
+            }
+
+            if (peerId === localPeerId && action.kind === 'draw' && state.drawOfferByPeerId === peerId) {
+                showToast(i18n('msgDrawOffered'));
+            }
+            if (peerId === localPeerId && action.kind === 'takeback' && state.takebackOfferByPeerId === peerId) {
+                showToast(i18n('msgTakebackRequested'));
+            }
+
+            if (action.kind === 'comment') {
+                broadcastLogEntry(state.log?.[0]);
+                renderLog();
+                return;
+            }
+
+            state.version = (state.version || 0) + 1;
+            if (action.kind === 'move') {
+                broadcastMoveEvent(action);
+                render();
+                return;
+            }
+
+            broadcastState();
+            render();
+        }
+
+        function sendAction(action) {
+            if (!state) return;
+            if (!localPeerId) {
+                showToast(i18n('errUnconnected'));
+                return;
+            }
+            const pausedBlockedActions = [
+                'move', 'swap', 'choice2', 'draw', 'draw-response', 'takeback', 'takeback-response',
+                'resign', 'offer', 'select-offer', 'ready'
+            ];
+            if (hasDisconnectedSeatedPlayer() && pausedBlockedActions.includes(action.kind)) {
+                showToast(i18n('errMatchPausedForDisconnect'));
+                return;
+            }
+            if (localMode === 'host') {
+                applyHostAction(localPeerId, action);
+                return;
+            }
+            if (!hostConnection || !hostConnection.open) {
+                showToast(i18n('errNoHostConnection'));
+                return;
+            }
+            if (action.kind === 'move') {
+                action = { ...action, requestId: createRequestId() };
+                setPendingMove(action);
+            }
+            if ((action.kind === 'draw' || action.kind === 'takeback') && !applyOptimisticRequest(action.kind)) {
+                return;
+            }
+            hostConnection.send({ type: 'action', action });
+        }
+
+        function canLocalResign() {
+            if (!state || state.status !== 'playing') return false;
+            const localParticipant = getParticipantById(localPeerId);
+            return Boolean(localParticipant && (localParticipant.seat === 'black' || localParticipant.seat === 'white'));
+        }
+
+        function openResignConfirm() {
+            if (!canLocalResign()) return;
+            resignConfirmOpen = true;
+            renderResignConfirm();
+        }
+
+        function closeResignConfirm() {
+            resignConfirmOpen = false;
+            renderResignConfirm();
+        }
+
+        function renderResignConfirm() {
+            const visible = resignConfirmOpen && canLocalResign();
+            elements.resignConfirm.hidden = !visible;
+        }
+
+        function broadcastState() {
+            if (localMode !== 'host' || !state) return;
+            guestConnections.forEach((connection) => {
+                if (connection && connection.open) {
+                    connection.send({ type: 'state', state });
+                }
+            });
+        }
+
+        function createMoveAppliedEvent(action) {
+            const move = state.moves[state.moves.length - 1];
+            return {
+                kind: 'move-applied',
+                version: state.version || 0,
+                requestId: action.requestId || '',
+                move,
+                phase: state.phase,
+                status: state.status,
+                winnerId: state.winnerId,
+                resultText: state.resultText,
+                drawOfferByPeerId: state.drawOfferByPeerId,
+                takebackOfferByPeerId: state.takebackOfferByPeerId,
+                opening: state.opening,
+                clocks: state.clocks,
+                readyByPeerId: state.readyByPeerId,
+                reviewMoves: state.status === 'finished' ? state.reviewMoves : null,
+                reviewCursor: state.status === 'finished' ? state.reviewCursor : null,
+            };
+        }
+
+        function broadcastMoveEvent(action) {
+            if (localMode !== 'host' || !state) return;
+            const event = createMoveAppliedEvent(action);
+            guestConnections.forEach((connection) => {
+                if (connection && connection.open) {
+                    connection.send({ type: 'event', event });
+                }
+            });
+        }
+
+        function broadcastLogEntry(entry) {
+            if (localMode !== 'host' || !state || !entry) return;
+            const event = { kind: 'log-entry', entry };
+            guestConnections.forEach((connection) => {
+                if (connection && connection.open) {
+                    connection.send({ type: 'event', event });
+                }
+            });
+        }
+
+        function requestSnapshot() {
+            clearPendingMove();
+            renderBoard();
+            if (localMode === 'guest' && hostConnection && hostConnection.open) {
+                hostConnection.send({ type: 'snapshot-request' });
+            }
+        }
+
+        function isPendingMoveConfirmed(event) {
+            return pendingMove && (
+                pendingMove.requestId === event.requestId ||
+                (event.move && pendingMove.peerId === event.move.peerId && pendingMove.x === event.move.x && pendingMove.y === event.move.y)
+            );
+        }
+
+        function applyMoveEvent(event) {
+            if (!state || !event || event.kind !== 'move-applied' || !event.move) return;
+
+            const currentVersion = state.version || 0;
+            const nextVersion = event.version || 0;
+            if (nextVersion && nextVersion <= currentVersion) {
+                if (isPendingMoveConfirmed(event)) clearPendingMove();
+                renderBoard();
+                return;
+            }
+            if (!Array.isArray(state.moves)) state.moves = [];
+            if (nextVersion && nextVersion !== currentVersion + 1) {
+                requestSnapshot();
+                return;
+            }
+            if (state.moves.length !== event.move.number - 1) {
+                requestSnapshot();
+                return;
+            }
+
+            state.moves.push(event.move);
+            if (event.move.peerId !== localPeerId) playStoneSound(false);
+
+            state.phase = event.phase;
+            state.status = event.status;
+            state.winnerId = event.winnerId;
+            state.resultText = event.resultText;
+            state.drawOfferByPeerId = event.drawOfferByPeerId;
+            state.takebackOfferByPeerId = event.takebackOfferByPeerId || '';
+            state.opening = event.opening;
+            state.clocks = event.clocks;
+            state.readyByPeerId = event.readyByPeerId;
+            state.version = nextVersion || currentVersion + 1;
+            if (event.status === 'finished') {
+                state.reviewMoves = event.reviewMoves || [];
+                state.reviewCursor = event.reviewCursor ?? state.reviewMoves.length;
+            }
+            if (isPendingMoveConfirmed(event)) clearPendingMove();
+            displayMoveCount = -1;
+            render();
+        }
+
+        function applyLogEntryEvent(event) {
+            if (!state || !event || event.kind !== 'log-entry' || !event.entry) return;
+            addLogEntry(event.entry);
+            renderLog();
+        }
+
+        function applyNetworkEvent(event) {
+            if (!event) return;
+            if (event.kind === 'move-applied') {
+                applyMoveEvent(event);
+                return;
+            }
+            if (event.kind === 'log-entry') {
+                applyLogEntryEvent(event);
+            }
+        }
+
+        function broadcastClocks() {
+            if (localMode !== 'host' || !state) return;
+            guestConnections.forEach((connection) => {
+                if (connection && connection.open) {
+                    connection.send({ type: 'clock', clocks: state.clocks });
+                }
+            });
+        }
+
+        function updateShareLinkUi() {
+            // Share-link controls are optional in this build.
+        }
+
+        function setConnectionLabel(text) {
+            connectionState = text;
+        }
+
+        function applyHostTimeSettings() {
+            if (!state || localMode !== 'host') return;
+            if (state.status === 'playing') {
+                elements.infoBaseMinutesInput.value = String(Math.round(state.config.baseSeconds / 60));
+                elements.infoIncrementInput.value = String(state.config.incrementSeconds);
+                showToast(i18n('errChangeTimePlaying'));
+                return;
+            }
+
+            const baseMinutes = clamp(Number(elements.infoBaseMinutesInput.value) || 5, 1, 180);
+            const incrementSeconds = clamp(Number(elements.infoIncrementInput.value) || 5, 0, 60);
+            elements.infoBaseMinutesInput.value = String(baseMinutes);
+            elements.infoIncrementInput.value = String(incrementSeconds);
+            state.config.baseSeconds = baseMinutes * 60;
+            state.config.incrementSeconds = incrementSeconds;
+            Object.keys(state.clocks.remainingMsByPeerId).forEach((peerId) => {
+                state.clocks.remainingMsByPeerId[peerId] = state.config.baseSeconds * 1000;
+            });
+            broadcastState();
+            render();
+        }
+
+        function getSeatOccupant(seat) {
+            const peerId = seat === 'black' ? getBlackPeerId() : getWhitePeerId();
+            return peerId ? getParticipantById(peerId) : null;
+        }
+
+        function handleSeatButtonClick(seat) {
+            const occupant = getSeatOccupant(seat);
+            if (!occupant) {
+                if (!canSelfChangeSeat(localPeerId, seat)) {
+                    showToast(i18n('errSeatOccupied'));
+                    return;
+                }
+                sendAction({ kind: 'seat-change', targetPeerId: localPeerId, seat });
+                return;
+            }
+            if (occupant.id === localPeerId || localMode === 'host') {
+                sendAction({ kind: 'seat-change', targetPeerId: occupant.id, seat: 'spectator' });
+            }
+        }
+
+        function renderReadyButton(container, participant) {
+            container.innerHTML = '';
+
+            if (!participant) {
+                const placeholder = document.createElement('span');
+                placeholder.className = 'ready-mark passive';
+                placeholder.textContent = '✓';
+                placeholder.setAttribute('aria-hidden', 'true');
+                container.appendChild(placeholder);
+                return;
+            }
+
+            const isReady = Boolean(state.readyByPeerId?.[participant.id]);
+            const isLocalSeat = participant.id === localPeerId;
+            const canToggle = isLocalSeat && state.status !== 'playing';
+
+            if (canToggle) {
+                const readyButton = document.createElement('button');
+                readyButton.type = 'button';
+                readyButton.className = `ready-button${isReady ? ' active' : ''}`;
+                readyButton.textContent = '✓';
+                readyButton.title = isReady ? i18n('readyAriaCancel') : i18n('readyAriaTitle');
+                readyButton.setAttribute('aria-label', readyButton.title);
+                readyButton.addEventListener('pointerdown', (event) => {
+                    if (event.pointerType === 'mouse' && event.button !== 0) return;
+                    if (event.isPrimary === false) return;
+                    event.preventDefault();
+                    sendAction({ kind: 'ready', ready: !isReady });
+                });
+                container.appendChild(readyButton);
+                return;
+            }
+
+            const readyMark = document.createElement('span');
+            readyMark.className = `ready-mark passive${isReady ? ' active' : ''}`;
+            readyMark.textContent = '✓';
+            readyMark.setAttribute('aria-label', isReady ? i18n('readyAriaTitle') : i18n('readyAriaCancel'));
+            container.appendChild(readyMark);
+        }
+
+        function renderDrawConfirm() {
+            if (!state) {
+                elements.drawConfirm.hidden = true;
+                return;
+            }
+            const offerPeerId = state.drawOfferByPeerId;
+            const localParticipant = getParticipantById(localPeerId);
+            const isResponder = Boolean(
+                offerPeerId &&
+                state.status === 'playing' &&
+                localParticipant &&
+                (localParticipant.seat === 'black' || localParticipant.seat === 'white') &&
+                localPeerId !== offerPeerId
+            );
+            elements.drawConfirm.hidden = !isResponder;
+        }
+
+        function renderTakebackConfirm() {
+            if (!state) {
+                elements.takebackConfirm.hidden = true;
+                return;
+            }
+            const offerPeerId = state.takebackOfferByPeerId;
+            const localParticipant = getParticipantById(localPeerId);
+            const isResponder = Boolean(
+                offerPeerId &&
+                state.status === 'playing' &&
+                localParticipant &&
+                (localParticipant.seat === 'black' || localParticipant.seat === 'white') &&
+                localPeerId !== offerPeerId
+            );
+            elements.takebackConfirm.hidden = !isResponder;
+        }
+
+        function destroyNetworkState() {
+            clearHostReconnectTimer();
+            guestConnections.forEach((connection) => {
+                try { connection.close(); } catch (error) { }
+            });
+            guestConnections.clear();
+            if (hostConnection) {
+                try { hostConnection.close(); } catch (error) { }
+                hostConnection = null;
+            }
+            if (peer) {
+                try { peer.destroy(); } catch (error) { }
+                peer = null;
+            }
+            roomId = '';
+            localPeerId = '';
+            localMode = 'idle';
+            localPlayerToken = '';
+            hasNotifiedHostLeaving = false;
+            hostTakeoverInProgress = false;
+            lastClockBroadcastBucket = null;
+        }
+
+        function notifyHostLeaving() {
+            if (hasNotifiedHostLeaving) return;
+            if (localMode !== 'guest') return;
+            if (!hostConnection || !hostConnection.open) return;
+            hasNotifiedHostLeaving = true;
+            try {
+                hostConnection.send({ type: 'bye' });
+            } catch (error) {
+                // Best-effort on tab close.
+            }
+        }
+
+        function resetAppState() {
+            destroyNetworkState();
+            state = null;
+            setConnectionLabel('未接続');
+            elements.leaveRoomBtn.disabled = true;
+            setScreen('lobby');
+            updateShareLinkUi();
+            render();
+        }
+
+        function joinRoom() {
+            if (peer) resetAppState();
+
+            const roomCode = elements.roomCodeInput.value.trim();
+            if (!roomCode) {
+                showToast(i18n('errNeedRoomCode'));
+                return;
+            }
+
+            const hostName = sanitizeName(elements.nameInput.value || 'Player');
+            const settings = buildSettings();
+            roomId = `${ROOM_PREFIX}${roomCode}`;
+            localPlayerToken = getLocalPlayerToken(roomCode);
+            
+            setConnectionLabel(i18n('msgRoomConnecting'));
+            setScreen('game');
+
+            peer = new Peer(roomId);
+
+            peer.on('open', (id) => {
+                localMode = 'host';
+                localPeerId = id;
+                state = createInitialState(roomId, id, hostName, settings, localPlayerToken);
+                elements.leaveRoomBtn.disabled = false;
+                setConnectionLabel(i18n('msgRoomCreated'));
+                render();
+            });
+
+            peer.on('connection', (incoming) => {
+                if (localMode !== 'host') return;
+                if (!state) {
+                    incoming.on('open', () => incoming.send({ type: 'reject', message: 'Not initialized.' }));
+                    incoming.on('open', () => incoming.close());
+                    return;
+                }
+                guestConnections.set(incoming.peer, incoming);
+                wireConnectionHandlers(incoming);
+            });
+
+            peer.on('error', (error) => {
+                if (error.type === 'unavailable-id') {
+                    peer.destroy();
+                    
+                    peer = new Peer(undefined, { roomId });
+                    peer.on('open', (id) => {
+                        localMode = 'guest';
+                        localPeerId = id;
+                        hostConnection = peer.connect(roomId, { reliable: true, metadata: { name: hostName, token: localPlayerToken } });
+                        wireConnectionHandlers(hostConnection);
+                    });
+                    peer.on('error', (err) => {
+                        showToast(`Error: ${err.type || err.message}`);
+                        resetAppState();
+                    });
+                } else {
+                    showToast(`Error: ${error.type || error.message}`);
+                    resetAppState();
+                }
+            });
+        }
+
+        function wireConnectionHandlers(connection) {
+            if (!connection) return;
+
+            connection.on('open', () => {
+                if (localMode === 'guest') {
+                    setConnectionLabel(i18n('msgRoomSyncing'));
+                    elements.leaveRoomBtn.disabled = false;
+                    connection.send({ type: 'hello', name: sanitizeName(elements.nameInput.value || 'Player'), token: localPlayerToken });
+                } else {
+                    setConnectionLabel(i18n('msgRoomGuestConnecting'));
+                }
+            });
+
+            connection.on('data', (message) => {
+                if (!message || typeof message !== 'object') return;
+
+                if (message.type === 'hello' && localMode === 'host') {
+                    const nextName = sanitizeName(message.name || 'Player');
+                    const token = String(message.token || connection.metadata?.token || '');
+                    const reconnectParticipant = getSeatedParticipantByToken(token);
+                    const existing = getParticipantById(connection.peer);
+                    const canReconnectByName = Boolean(reconnectParticipant && reconnectParticipant.name === nextName);
+                    if (reconnectParticipant && reconnectParticipant.id !== connection.peer && canReconnectByName) {
+                        reconnectDisconnectedParticipant(reconnectParticipant.id, connection.peer, nextName, token);
+                    } else if (!existing) {
+                        state.participantsById[connection.peer] = { id: connection.peer, name: nextName, seat: 'spectator', isHost: false, token };
+                        ensureJoinOrderContains(connection.peer);
+                        ensureClockEntry(connection.peer);
+                        addLog('presence', i18n('msgJoined', nextName));
+                    } else if (existing.name !== nextName) {
+                        existing.name = nextName;
+                        if (token) existing.token = token;
+                    }
+
+                    broadcastState();
+                    render();
+                    return;
+                }
+
+                if (message.type === 'action' && localMode === 'host') {
+                    applyHostAction(connection.peer, message.action);
+                    return;
+                }
+
+                if (message.type === 'snapshot-request' && localMode === 'host') {
+                    if (state && connection.open) connection.send({ type: 'state', state });
+                    return;
+                }
+
+                if (message.type === 'bye' && localMode === 'host') {
+                    const participant = getParticipantById(connection.peer);
+                    if (participant) {
+                        const wasSeated = participant.seat === 'black' || participant.seat === 'white';
+                        if (!preserveDisconnectedParticipant(connection.peer)) {
+                            if (wasSeated) {
+                                addLog('presence', i18n('msgDisconnected', participant.name));
+                            }
+                            removeParticipant(connection.peer, i18n('msgLeft', participant.name));
+                        }
+                        broadcastState();
+                        render();
+                    }
+                    return;
+                }
+
+                if (message.type === 'state') {
+                    state = message.state;
+                    clearPendingMove();
+                    elements.leaveRoomBtn.disabled = false;
+                    if (localMode === 'guest') {
+                        roomId = state.roomId;
+                        setConnectionLabel(i18n('msgRoomConnected'));
+                    }
+                    
+                    if (displayMoveCount !== -1) {
+                        const currentMax = getRenderedMoves().length;
+                        if (displayMoveCount > currentMax) displayMoveCount = -1;
+                    }
+                    render();
+                    return;
+                }
+
+                if (message.type === 'event') {
+                    applyNetworkEvent(message.event);
+                    return;
+                }
+
+                if (message.type === 'clock') {
+                    if (!state || !message.clocks) return;
+                    state.clocks = message.clocks;
+                    renderPlayers();
+                    return;
+                }
+
+                if (message.type === 'notice' && message.message) {
+                    clearPendingMove();
+                    clearLocalOptimisticRequests();
+                    render();
+                    showToast(message.message);
+                    return;
+                }
+
+                if (message.type === 'reject') {
+                    showToast(message.message);
+                    resetAppState();
+                }
+            });
+
+            connection.on('close', () => {
+                setConnectionLabel(i18n('msgRoomClosed'));
+                if (localMode === 'host') {
+                    guestConnections.delete(connection.peer);
+                    if (suppressedConnectionClosePeers.delete(connection.peer)) {
+                        return;
+                    }
+                    const participant = getParticipantById(connection.peer);
+                    if (participant) {
+                        const wasSeated = participant.seat === 'black' || participant.seat === 'white';
+                        if (!preserveDisconnectedParticipant(connection.peer)) {
+                            if (wasSeated) {
+                                addLog('presence', i18n('msgDisconnected', participant.name));
+                            }
+                            removeParticipant(connection.peer, i18n('msgLeft', participant.name));
+                        }
+                        broadcastState();
+                        render();
+                    }
+                } else if (localMode === 'guest') {
+                    hostConnection = null;
+                    handleGuestHostDisconnect();
+                }
+            });
+
+            connection.on('error', () => {
+                showToast(i18n('errCommError'));
+                if (localMode === 'guest' && connection === hostConnection) {
+                    scheduleGuestReconnect();
+                }
+            });
+        }
+
+        function leaveRoom() {
+            resetAppState();
+            showToast(i18n('msgLeftRoom'));
+        }
+
+        function resizeBoard() {
+            const container = document.getElementById('boardContainer');
+            const wrap = document.getElementById('boardWrap');
+            
+            if (!container || !wrap) return;
+
+            const containerRect = container.getBoundingClientRect();
+            const size = Math.max(260, Math.floor(Math.min(containerRect.width, containerRect.height || containerRect.width)));
+
+            wrap.style.width = size + 'px';
+            wrap.style.height = size + 'px';
+
+            const dpr = window.devicePixelRatio || 1;
+            elements.boardCanvas.width = Math.floor(size * dpr);
+            elements.boardCanvas.height = Math.floor(size * dpr);
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            
+            const smallScreenTopOffset = window.innerWidth <= 599 ? 5 / 620 : 0;
+            let baseMargin, horizontalMargin, bottomMargin, topMargin, rightMargin;
+            
+            if (showCoords) {
+                baseMargin = Math.max(24, Math.round(size * (35 / 620)));
+                horizontalMargin = Math.max(30, Math.round(size * (43 / 620)));
+                bottomMargin = Math.max(30, Math.round(size * (43 / 620)));
+                topMargin = Math.max(18, Math.round(size * ((25 / 620) + smallScreenTopOffset)));
+                rightMargin = Math.max(18, Math.round(size * (25 / 620)));
+            } else {
+                horizontalMargin = Math.max(15, Math.round(size * (20 / 620)));
+                bottomMargin = horizontalMargin;
+                topMargin = horizontalMargin + (window.innerWidth <= 599 ? Math.round(size * (5 / 620)) : 0);
+                rightMargin = horizontalMargin;
+                baseMargin = horizontalMargin;
+            }
+
+            const playableWidth = size - horizontalMargin - rightMargin;
+            const playableHeight = size - topMargin - bottomMargin;
+            const cell = Math.min(playableWidth, playableHeight) / (BOARD_SIZE - 1);
+            const coordinateGap = Math.max(18, Math.round(baseMargin * 0.82));
+            
+            boardGeometry = {
+                size,
+                padding: horizontalMargin,
+                topPadding: topMargin,
+                rightPadding: rightMargin,
+                bottomPadding: bottomMargin,
+                coordinateGap,
+                cell,
+            };
+            renderBoard();
+        }
+
+        function drawConstraintHighlight(descriptor) {
+            if (!boardGeometry || !descriptor?.constraint) return;
+            const { padding, topPadding, cell } = boardGeometry;
+            ctx.save();
+            ctx.strokeStyle = 'rgba(22, 70, 59, 0.48)';
+            ctx.fillStyle = 'rgba(22, 70, 59, 0.08)';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([10, 8]);
+
+            if (descriptor.constraint.kind === 'center') {
+                const x = padding + CENTER * cell;
+                const y = topPadding + CENTER * cell;
+                ctx.beginPath();
+                ctx.arc(x, y, cell * 0.52, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+            }
+
+            if (descriptor.constraint.kind === 'square') {
+                const radius = descriptor.constraint.radius;
+                const left = padding + (CENTER - radius) * cell - cell * 0.5;
+                const top = topPadding + (CENTER - radius) * cell - cell * 0.5;
+                const side = (radius * 2 + 1) * cell;
+                ctx.beginPath();
+                ctx.roundRect(left, top, side, side, 18);
+                ctx.fill();
+                ctx.stroke();
+            }
+            ctx.restore();
+        }
+
+        function drawOfferedMoves() {
+            if (!state || !boardGeometry || !state.opening.offeredMoves.length) return;
+            const descriptor = phaseDescriptor();
+            const { padding, topPadding, cell } = boardGeometry;
+            ctx.save();
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.font = `${Math.floor(cell * 0.42)}px Segoe UI`;
+            
+            const isSelectPhase = descriptor.boardActionKind === 'select-offer';
+
+            state.opening.offeredMoves.forEach((move, index) => {
+                const x = padding + move.x * cell;
+                const y = topPadding + move.y * cell;
+                ctx.beginPath();
+                
+                if (isSelectPhase) {
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+                    ctx.arc(x, y, cell * 0.22, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    ctx.fillStyle = 'rgba(28, 26, 24, 0.18)';
+                    ctx.strokeStyle = 'rgba(38, 33, 30, 0.45)';
+                    ctx.lineWidth = 2;
+                    ctx.arc(x, y, cell * 0.34, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                    ctx.fillText(String(index + 1), x, y + 1);
+                }
+            });
+            ctx.restore();
+        }
+
+        function drawStones() {
+            if (!state || !boardGeometry) return;
+            const { padding, topPadding, cell } = boardGeometry;
+            ctx.save();
+            
+            const allMoves = getRenderedMoves();
+            const count = displayMoveCount === -1 ? allMoves.length : displayMoveCount;
+            const moves = allMoves.slice(0, count);
+
+            moves.forEach((move, index) => {
+                const x = padding + move.x * cell;
+                const y = topPadding + move.y * cell;
+                
+                ctx.beginPath(); 
+                ctx.arc(x, y, cell * 0.45, 0, Math.PI * 2);
+                ctx.fillStyle = move.color === 'black' ? '#000' : '#fff'; 
+                ctx.fill();
+                ctx.lineWidth = 1; 
+                ctx.strokeStyle = '#333'; 
+                ctx.stroke();
+
+                if (showMoveNumbers) {
+                    const moveText = String(index + 1);
+                    const moveTextY = y + Math.max(1, Math.round(cell * 0.03));
+                    ctx.fillStyle = move.color === 'black' ? '#eee' : '#333';
+                    const textLen = moveText.length;
+                    const baseRatio = textLen >= 3 ? 0.3 : (textLen === 2 ? 0.38 : 0.45);
+                    const fontSize = Math.max(10, Math.floor(cell * baseRatio));
+                    ctx.font = `600 ${fontSize}px 'Segoe UI', 'Yu Gothic UI', Meiryo, sans-serif`;
+                    ctx.textAlign = 'center'; 
+                    ctx.textBaseline = 'middle';
+                    ctx.lineWidth = 2.5;
+                    ctx.strokeStyle = move.color === 'black' ? 'rgba(0, 0, 0, 0.55)' : 'rgba(255, 255, 255, 0.9)';
+                    ctx.strokeText(moveText, x, moveTextY);
+                    ctx.fillText(moveText, x, moveTextY);
+                }
+            });
+
+            const canShowPendingMove = pendingMove
+                && state.status === 'playing'
+                && displayMoveCount === -1
+                && !moves.some((move) => move.x === pendingMove.x && move.y === pendingMove.y);
+            if (canShowPendingMove) {
+                const x = padding + pendingMove.x * cell;
+                const y = topPadding + pendingMove.y * cell;
+                ctx.save();
+                ctx.globalAlpha = 0.58;
+                ctx.beginPath();
+                ctx.arc(x, y, cell * 0.45, 0, Math.PI * 2);
+                ctx.fillStyle = pendingMove.color === 'black' ? '#000' : '#fff';
+                ctx.fill();
+                ctx.lineWidth = 2;
+                ctx.setLineDash([4, 4]);
+                ctx.strokeStyle = pendingMove.color === 'black' ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.45)';
+                ctx.stroke();
+                if (showMoveNumbers) {
+                    const moveText = String(pendingMove.number);
+                    const moveTextY = y + Math.max(1, Math.round(cell * 0.03));
+                    ctx.setLineDash([]);
+                    ctx.fillStyle = pendingMove.color === 'black' ? '#eee' : '#333';
+                    const textLen = moveText.length;
+                    const baseRatio = textLen >= 3 ? 0.3 : (textLen === 2 ? 0.38 : 0.45);
+                    const fontSize = Math.max(10, Math.floor(cell * baseRatio));
+                    ctx.font = `600 ${fontSize}px 'Segoe UI', 'Yu Gothic UI', Meiryo, sans-serif`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(moveText, x, moveTextY);
+                }
+                ctx.restore();
+            }
+            ctx.restore();
+        }
+
+        function renderBoard() {
+            if (!boardGeometry) return;
+            const { size, padding, topPadding, rightPadding, bottomPadding, coordinateGap, cell } = boardGeometry;
+            ctx.clearRect(0, 0, size, size);
+
+            const theme = boardThemes[boardThemeIndex];
+            const boardGradient = ctx.createLinearGradient(0, 0, size, size);
+            boardGradient.addColorStop(0, theme.grad1);
+            boardGradient.addColorStop(1, theme.grad2);
+            ctx.fillStyle = boardGradient;
+            ctx.fillRect(0, 0, size, size);
+
+            ctx.fillStyle = 'rgba(255,255,255,0.08)';
+            for (let index = 0; index < 8; index += 1) {
+                ctx.fillRect(index * size / 8, 0, 1, size);
+            }
+
+            ctx.save();
+            ctx.strokeStyle = 'rgba(63, 42, 19, 0.9)';
+            ctx.lineWidth = 1.2;
+            for (let line = 0; line < BOARD_SIZE; line += 1) {
+                const x = padding + line * cell;
+                const y = topPadding + line * cell;
+                ctx.beginPath();
+                ctx.moveTo(padding, y);
+                ctx.lineTo(padding + (BOARD_SIZE - 1) * cell, y);
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(x, topPadding);
+                ctx.lineTo(x, topPadding + (BOARD_SIZE - 1) * cell);
+                ctx.stroke();
+            }
+
+            STAR_POINTS.forEach(([x, y]) => {
+                ctx.beginPath();
+                ctx.fillStyle = 'rgba(51, 33, 17, 0.82)';
+                ctx.arc(padding + x * cell, topPadding + y * cell, cell * 0.1, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            if (showCoords) {
+                ctx.fillStyle = 'rgba(63, 42, 19, 0.84)';
+                ctx.font = `${Math.max(12, Math.floor(cell * 0.34))}px "Yu Gothic UI", Meiryo, sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                for (let index = 0; index < BOARD_SIZE; index += 1) {
+                    const x = padding + index * cell;
+                    const y = topPadding + index * cell;
+                    ctx.fillText(LETTERS[index], x, size - bottomPadding + coordinateGap);
+                    ctx.fillText(String(BOARD_SIZE - index), padding - coordinateGap, y);
+                }
+            }
+            ctx.restore();
+
+            if (displayMoveCount === -1 || displayMoveCount === getRenderedMoves().length) {
+                drawConstraintHighlight(phaseDescriptor());
+                drawOfferedMoves();
+            }
+            drawStones();
+        }
+
+        function boardPointFromEvent(event) {
+            if (!boardGeometry) return null;
+            const rect = elements.boardCanvas.getBoundingClientRect();
+            if (rect.width === 0 || rect.height === 0) return null;
+            const scaleX = boardGeometry.size / rect.width;
+            const scaleY = boardGeometry.size / rect.height;
+            const x = (event.clientX - rect.left) * scaleX;
+            const y = (event.clientY - rect.top) * scaleY;
+            
+            const { padding, topPadding, cell } = boardGeometry;
+            const ix = Math.round((x - padding) / cell);
+            const iy = Math.round((y - topPadding) / cell);
+            if (ix < 0 || iy < 0 || ix >= BOARD_SIZE || iy >= BOARD_SIZE) return null;
+            const px = padding + ix * cell;
+            const py = topPadding + iy * cell;
+            const hitRadius = Math.max(cell * 0.58, isTouchMain() ? 12 : 0);
+            if (Math.hypot(px - x, py - y) > hitRadius) return null;
+            return { x: ix, y: iy };
+        }
+
+        function handleBoardPointerDown(event) {
+            if (event.pointerType === 'mouse' && event.button !== 0) return;
+            if (event.isPrimary === false) return;
+            event.preventDefault();
+            if (!state) return;
+            
+            if (displayMoveCount !== -1 && displayMoveCount !== getRenderedMoves().length) {
+                displayMoveCount = -1;
+                renderBoard();
+                return;
+            }
+
+            const point = boardPointFromEvent(event);
+            if (!point) return;
+            if (hasDisconnectedSeatedPlayer() && !canUseReviewBoard()) {
+                showToast(i18n('errMatchPausedForDisconnect'));
+                return;
+            }
+            if (canUseReviewBoard()) {
+                playStoneSound(true);
+                sendAction({ kind: 'review-move', x: point.x, y: point.y });
+                return;
+            }
+            const descriptor = phaseDescriptor();
+            if (!descriptor.allowBoardAction) return;
+            if (descriptor.actorPeerId !== localPeerId) {
+                showToast(i18n('errNotYourTurnBoard'));
+                return;
+            }
+
+            if (descriptor.boardActionKind === 'move') {
+                if (pendingMove) return;
+                playStoneSound(true);
+                sendAction({ kind: 'move', x: point.x, y: point.y });
+            }
+            if (descriptor.boardActionKind === 'offer') {
+                playStoneSound(true);
+                sendAction({ kind: 'offer', x: point.x, y: point.y });
+            }
+            if (descriptor.boardActionKind === 'select-offer') {
+                playStoneSound(true);
+                sendAction({ kind: 'select-offer', x: point.x, y: point.y });
+            }
+        }
+
+        function handleBoardContextMenu(event) {
+            event.preventDefault();
+            if (displayMoveCount !== -1 && displayMoveCount !== getRenderedMoves().length) {
+                displayMoveCount = -1;
+                renderBoard();
+                return;
+            }
+            if (!canUseReviewBoard()) return;
+            if (!boardPointFromEvent(event)) return;
+            sendAction({ kind: 'review-undo' });
+        }
+
+        function renderRoomSummary() {
+            if (!state) {
+                elements.roomSummary.textContent = `5 ${i18n('minute')} + 5 ${i18n('second')}`;
+                elements.timeEditor.hidden = true;
+                elements.roomSummary.hidden = false;
+                return;
+            }
+
+            const settings = state.config;
+            elements.roomSummary.textContent = `${Math.round(settings.baseSeconds / 60)} ${i18n('minute')} + ${settings.incrementSeconds} ${i18n('second')}`;
+            elements.timeEditor.hidden = localMode !== 'host' || state.status === 'playing';
+            elements.roomSummary.hidden = localMode === 'host' && !elements.timeEditor.hidden;
+            if (localMode === 'host') {
+                elements.infoBaseMinutesInput.value = String(Math.round(settings.baseSeconds / 60));
+                elements.infoIncrementInput.value = String(settings.incrementSeconds);
+                elements.infoBaseMinutesInput.disabled = false;
+                elements.infoIncrementInput.disabled = false;
+            }
+        }
+
+        function renderPlayers() {
+            if (!state) {
+                elements.blackPlayerName.textContent = i18n('playerNotJoined');
+                elements.whitePlayerName.textContent = i18n('playerNotJoined');
+                elements.blackPlayerTimer.textContent = '';
+                elements.whitePlayerTimer.textContent = '';
+                elements.blackSeatBtn.textContent = '＋';
+                elements.whiteSeatBtn.textContent = '＋';
+                elements.blackSeatBtn.disabled = true;
+                elements.whiteSeatBtn.disabled = true;
+                elements.blackSeatBtn.hidden = false;
+                elements.whiteSeatBtn.hidden = false;
+                [elements.blackReadyWrap, elements.whiteReadyWrap].forEach((wrap) => {
+                    wrap.innerHTML = '';
+                    const placeholder = document.createElement('span');
+                    placeholder.className = 'ready-mark passive';
+                    placeholder.textContent = '✓';
+                    placeholder.setAttribute('aria-hidden', 'true');
+                    wrap.appendChild(placeholder);
+                });
+                elements.blackPlayerCard.classList.remove('active');
+                elements.whitePlayerCard.classList.remove('active');
+                return;
+            }
+
+            const blackParticipant = getSeatOccupant('black');
+            const whiteParticipant = getSeatOccupant('white');
+            const blackPeerId = blackParticipant?.id || '';
+            const whitePeerId = whiteParticipant?.id || '';
+            const activePeerId = state.clocks.activePeerId;
+
+            function renderParticipantName(participant) {
+                if (!participant) return i18n('playerNotJoined');
+                const displayName = getDisplayName(participant);
+                if (!isParticipantDisconnected(participant)) return displayName;
+                return `${displayName} (${i18n('playerDisconnected', getDisconnectedRemainingSeconds(participant))})`;
+            }
+
+            elements.blackPlayerName.textContent = renderParticipantName(blackParticipant);
+            elements.whitePlayerName.textContent = renderParticipantName(whiteParticipant);
+            elements.blackPlayerTimer.textContent = blackPeerId ? formatTime(getDisplayRemainingMs(blackPeerId)) : '';
+            elements.whitePlayerTimer.textContent = whitePeerId ? formatTime(getDisplayRemainingMs(whitePeerId)) : '';
+            elements.blackSeatBtn.textContent = blackParticipant ? '－' : '＋';
+            elements.whiteSeatBtn.textContent = whiteParticipant ? '－' : '＋';
+            const canBlackSeatAction = blackParticipant ? (blackParticipant.id === localPeerId || localMode === 'host') : canSelfChangeSeat(localPeerId, 'black');
+            const canWhiteSeatAction = whiteParticipant ? (whiteParticipant.id === localPeerId || localMode === 'host') : canSelfChangeSeat(localPeerId, 'white');
+            elements.blackSeatBtn.disabled = !canBlackSeatAction;
+            elements.whiteSeatBtn.disabled = !canWhiteSeatAction;
+            elements.blackSeatBtn.hidden = false;
+            elements.whiteSeatBtn.hidden = false;
+
+            elements.blackPlayerCard.classList.toggle('active', activePeerId === blackPeerId && state.status === 'playing');
+            elements.whitePlayerCard.classList.toggle('active', activePeerId === whitePeerId && state.status === 'playing');
+            renderReadyButton(elements.blackReadyWrap, blackParticipant);
+            renderReadyButton(elements.whiteReadyWrap, whiteParticipant);
+        }
+
+        function renderSeats() {
+            elements.spectatorList.innerHTML = '';
+            if (!state) {
+                const item = document.createElement('li');
+                item.className = 'spectator-item';
+                item.textContent = i18n('spectatorEmpty');
+                elements.spectatorList.appendChild(item);
+                return;
+            }
+
+            const participants = Object.values(state.participantsById || {}).sort((left, right) => {
+                const leftIsHost = isHostParticipant(left);
+                const rightIsHost = isHostParticipant(right);
+                if (leftIsHost && !rightIsHost) return -1;
+                if (!leftIsHost && rightIsHost) return 1;
+                return left.name.localeCompare(right.name, 'ja');
+            });
+
+            participants.forEach((participant) => {
+                if (participant.seat !== 'spectator') return;
+                const item = document.createElement('li');
+                item.className = 'spectator-item';
+                item.textContent = getDisplayName(participant);
+                elements.spectatorList.appendChild(item);
+            });
+
+            if (!elements.spectatorList.childElementCount) {
+                const item = document.createElement('li');
+                item.className = 'spectator-item';
+                item.textContent = i18n('spectatorNone');
+                elements.spectatorList.appendChild(item);
+            }
+        }
+
+        function renderControls() {
+            const localParticipant = getParticipantById(localPeerId);
+            const canManageResult = Boolean(state && state.status === 'playing' && !hasDisconnectedSeatedPlayer() && localParticipant && (localParticipant.seat === 'black' || localParticipant.seat === 'white'));
+            
+            elements.menuDrawBtn.disabled = !canManageResult || Boolean(state?.drawOfferByPeerId);
+            elements.menuResignBtn.disabled = !canManageResult;
+            elements.menuTakebackBtn.disabled = !canManageResult || Boolean(state?.takebackOfferByPeerId);
+        }
+
+        function renderActionDialog() {
+            if (!state) {
+                elements.actionConfirm.hidden = true;
+                return;
+            }
+            const descriptor = phaseDescriptor();
+            const isMyTurn = descriptor.actorPeerId && descriptor.actorPeerId === localPeerId;
+            const isSwapOrChoice = isMyTurn && (state.phase.startsWith('swap-after-') || state.phase === 'choose-branch');
+            
+            if (dismissedActionDialogPhase !== state.phase) {
+                dismissedActionDialogPhase = '';
+            }
+
+            if (isSwapOrChoice && !dismissedActionDialogPhase) {
+                elements.actionConfirm.hidden = false;
+                
+                elements.actionConfirmButtons.innerHTML = '';
+                
+                if (state.phase.startsWith('swap-after-')) {
+                    const btnSwap = document.createElement('button');
+                    btnSwap.className = 'button button-warn';
+                    btnSwap.textContent = i18n('actionDialogSwap');
+                    btnSwap.onclick = () => { elements.actionConfirm.hidden = true; sendAction({ kind: 'swap' }); };
+                    elements.actionConfirmButtons.appendChild(btnSwap);
+                }
+                
+                const btnReg = document.createElement('button');
+                btnReg.className = 'button button-secondary';
+                btnReg.textContent = i18n('actionDialogRegular');
+                btnReg.onclick = () => { 
+                    elements.actionConfirm.hidden = true; 
+                    dismissedActionDialogPhase = state.phase; 
+                };
+                elements.actionConfirmButtons.appendChild(btnReg);
+
+                if (state.phase === 'choose-branch' || state.phase === 'swap-after-4') {
+                    const btn10 = document.createElement('button');
+                    btn10.className = 'button button-primary';
+                    btn10.textContent = i18n('actionDialogChoice2');
+                    btn10.onclick = () => { elements.actionConfirm.hidden = true; sendAction({ kind: 'choice2' }); };
+                    elements.actionConfirmButtons.appendChild(btn10);
+                }
+                
+            } else {
+                elements.actionConfirm.hidden = true;
+            }
+        }
+
+        function renderLog() {
+            elements.logList.innerHTML = '';
+            const logs = (state?.log || []).filter((entry) => entry.kind === 'presence' || entry.kind === 'comment' || entry.kind === 'system');
+            if (!logs.length) {
+                const item = document.createElement('li');
+                item.className = 'log-item';
+                item.textContent = i18n('chatNoMessages');
+                elements.logList.appendChild(item);
+                return;
+            }
+
+            logs.forEach((entry) => {
+                const item = document.createElement('li');
+                item.className = 'log-item';
+
+                const head = document.createElement('div');
+                head.className = 'log-head';
+                if (entry.kind === 'comment') {
+                    const [authorName] = String(entry.text || '').split('\n');
+                    const author = document.createElement('span');
+                    author.className = 'log-author';
+                    author.textContent = authorName;
+                    head.append(author);
+                }
+
+                const body = document.createElement('div');
+                body.className = 'log-body';
+                body.textContent = entry.kind === 'comment'
+                    ? String(entry.text || '').split('\n').slice(1).join('\n')
+                    : entry.text;
+
+                if (head.childElementCount) item.append(head);
+                item.append(body);
+                elements.logList.appendChild(item);
+            });
+        }
+
+        function submitLogComment() {
+            const text = normalizeCommentText(elements.logCommentInput.value);
+            if (!text) {
+                showToast(i18n('errNeedComment'));
+                return;
+            }
+            sendAction({ kind: 'comment', text });
+            elements.logCommentInput.value = '';
+        }
+
+        function render() {
+            setScreen(state || localMode !== 'idle' ? 'game' : 'lobby');
+            renderRoomSummary();
+            renderPlayers();
+            renderControls();
+            renderSeats();
+            renderLog();
+            renderDrawConfirm();
+            renderTakebackConfirm();
+            renderResignConfirm();
+            renderActionDialog();
+            renderBoard();
+            updateShareLinkUi();
+        }
+
+        function periodicClockWork() {
+            if (!state) return;
+
+            if (localMode === 'host' && state.status === 'playing') {
+                const expired = [state.seats.black, state.seats.white]
+                    .map((peerId) => getParticipantById(peerId))
+                    .find((participant) => isParticipantDisconnected(participant) && getDisconnectedRemainingSeconds(participant) <= 0);
+                if (expired) {
+                    const winnerId = getOpponentPeerId(expired.id);
+                    finishGame(winnerId, i18n('msgDisconnectTimeout', expired.name));
+                    broadcastState();
+                    render();
+                    return;
+                }
+            }
+
+            if (state.status === 'playing' && state.clocks.activePeerId === localPeerId) {
+                const remaining = getDisplayRemainingMs(localPeerId);
+                const sec = Math.floor(remaining / 1000);
+                if (lastReportedSec !== sec) {
+                    if (lastReportedSec !== null && (sec === 10 || (sec <= 5 && sec >= 1))) {
+                        playCountdownSound();
+                    }
+                    lastReportedSec = sec;
+                }
+            } else {
+                lastReportedSec = null;
+            }
+
+            if (localMode === 'host' && state.status === 'playing' && state.clocks.activePeerId) {
+                const remaining = getDisplayRemainingMs(state.clocks.activePeerId);
+                if (remaining <= 0) {
+                    applyElapsedTime();
+                    const loserId = state.clocks.activePeerId;
+                    const winnerId = getOpponentPeerId(loserId);
+                    finishGame(winnerId, i18n('msgTimeout', getPeerName(loserId)));
+                    broadcastState();
+                } else {
+                    const bucket = Math.floor(remaining / 1000);
+                    if (bucket !== lastClockBroadcastBucket) {
+                        lastClockBroadcastBucket = bucket;
+                        broadcastClocks();
+                    }
+                }
+            }
+
+            renderPlayers();
+        }
+
+        function toggleControlMenu(name) {
+            const isAction = name === 'action';
+            const menu = isAction ? document.getElementById('actionMenu') : document.getElementById('viewMenu');
+            const btn = isAction ? document.getElementById('actionMenuBtn') : document.getElementById('viewMenuBtn');
+            
+            if (currentOpenControlMenu && currentOpenControlMenu !== name) {
+                closeControlMenus();
+            }
+            
+            if (menu.hidden) {
+                menu.hidden = false;
+                btn.classList.add('active');
+                btn.setAttribute('aria-expanded', 'true');
+                currentOpenControlMenu = name;
+            } else {
+                closeControlMenus();
+            }
+        }
+
+        function closeControlMenus() {
+            ['action', 'view'].forEach(name => {
+                const menu = document.getElementById(name + 'Menu');
+                const btn = document.getElementById(name + 'MenuBtn');
+                if (menu) menu.hidden = true;
+                if (btn) {
+                    btn.classList.remove('active');
+                    btn.setAttribute('aria-expanded', 'false');
+                }
+            });
+            currentOpenControlMenu = null;
+        }
+
+        document.addEventListener('click', (e) => {
+            if (!currentOpenControlMenu) return;
+            const isAction = currentOpenControlMenu === 'action';
+            const menu = isAction ? document.getElementById('actionMenu') : document.getElementById('viewMenu');
+            const btn = isAction ? document.getElementById('actionMenuBtn') : document.getElementById('viewMenuBtn');
+            if (btn.contains(e.target) || menu.contains(e.target)) return;
+            closeControlMenus();
+        });
+
+        function offerDrawFromMenu() {
+            closeControlMenus();
+            sendAction({ kind: 'draw' });
+        }
+
+        function requestTakebackFromMenu() {
+            closeControlMenus();
+            sendAction({ kind: 'takeback' });
+        }
+
+        function resignFromMenu() {
+            closeControlMenus();
+            openResignConfirm();
+        }
+
+        function cycleLanguage() {
+            closeControlMenus();
+            currentLanguage = currentLanguage === 'ja' ? 'zh' : 'ja';
+            document.getElementById('langBtn').dataset.value = currentLanguage === 'ja' ? '日' : '中';
+            
+            const label = boardThemes[boardThemeIndex].label[currentLanguage] || boardThemes[boardThemeIndex].label['ja'];
+            document.getElementById('themeBtn').dataset.value = label;
+
+            applyLanguage();
+        }
+
+        function toggleSound() {
+            closeControlMenus();
+            soundEnabled = !soundEnabled;
+            document.getElementById('soundBtn').classList.toggle('active', soundEnabled);
+            if (soundEnabled) initAudio();
+        }
+
+        function toggleCoords() {
+            closeControlMenus();
+            showCoords = !showCoords;
+            document.getElementById('coordsBtn').classList.toggle('active', showCoords);
+            resizeBoard();
+        }
+
+        function cycleTheme() {
+            closeControlMenus();
+            boardThemeIndex = (boardThemeIndex + 1) % boardThemes.length;
+            const label = boardThemes[boardThemeIndex].label[currentLanguage] || boardThemes[boardThemeIndex].label['ja'];
+            document.getElementById('themeBtn').dataset.value = label;
+            renderBoard();
+        }
+
+        function toggleMoveNumbers() {
+            closeControlMenus();
+            showMoveNumbers = !showMoveNumbers;
+            document.getElementById('moveNumBtn').classList.toggle('active', showMoveNumbers);
+            renderBoard();
+        }
+
+        function resetMovesView() {
+            if (!state) return;
+            if (state.status === 'finished') {
+                sendAction({ kind: 'review-reset' });
+            } else {
+                displayMoveCount = -1;
+                renderBoard();
+            }
+        }
+
+        function goMoves(delta) {
+            if (!state) return;
+            if (state.status === 'finished') {
+                const max = (state.reviewMoves || []).length;
+                let current = state.reviewCursor ?? max;
+                current += delta;
+                if (current < 0) current = 0;
+                if (current > max) current = max;
+                sendAction({ kind: 'review-cursor', cursor: current });
+            } else {
+                const max = getRenderedMoves().length;
+                let current = displayMoveCount === -1 ? max : displayMoveCount;
+                current += delta;
+                if (current < 0) current = 0;
+                if (current >= max) current = -1;
+                displayMoveCount = current;
+                renderBoard();
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+            switch (e.key) {
+                case 'ArrowLeft': e.preventDefault(); goMoves(-1); break;
+                case 'ArrowRight': e.preventDefault(); goMoves(1); break;
+                case 'ArrowUp': e.preventDefault(); goMoves(-4); break;
+                case 'ArrowDown': e.preventDefault(); goMoves(4); break;
+            }
+        });
+
+        function bindPointerPress(element, handler) {
+            element.addEventListener('pointerdown', (event) => {
+                if (event.pointerType === 'mouse' && event.button !== 0) return;
+                if (event.isPrimary === false) return;
+                event.preventDefault();
+                handler(event);
+            });
+        }
+
+        elements.joinRoomBtn.addEventListener('click', joinRoom);
+        elements.roomCodeInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') joinRoom();
+        });
+        
+        elements.leaveRoomBtn.addEventListener('click', leaveRoom);
+        bindPointerPress(elements.blackSeatBtn, () => handleSeatButtonClick('black'));
+        bindPointerPress(elements.whiteSeatBtn, () => handleSeatButtonClick('white'));
+        elements.infoBaseMinutesInput.addEventListener('change', applyHostTimeSettings);
+        elements.infoIncrementInput.addEventListener('change', applyHostTimeSettings);
+        bindPointerPress(elements.drawAcceptBtn, () => sendAction({ kind: 'draw-response', accept: true }));
+        bindPointerPress(elements.drawDeclineBtn, () => sendAction({ kind: 'draw-response', accept: false }));
+        bindPointerPress(elements.takebackAcceptBtn, () => sendAction({ kind: 'takeback-response', accept: true }));
+        bindPointerPress(elements.takebackDeclineBtn, () => sendAction({ kind: 'takeback-response', accept: false }));
+        bindPointerPress(elements.resignConfirmBtn, () => {
+            closeResignConfirm();
+            sendAction({ kind: 'resign' });
+        });
+        bindPointerPress(elements.resignCancelBtn, closeResignConfirm);
+        bindPointerPress(document.getElementById('actionMenuBtn'), () => toggleControlMenu('action'));
+        bindPointerPress(document.getElementById('viewMenuBtn'), () => toggleControlMenu('view'));
+        bindPointerPress(elements.menuResignBtn, resignFromMenu);
+        bindPointerPress(elements.menuDrawBtn, offerDrawFromMenu);
+        bindPointerPress(elements.menuTakebackBtn, requestTakebackFromMenu);
+        bindPointerPress(document.getElementById('langBtn'), cycleLanguage);
+        bindPointerPress(document.getElementById('soundBtn'), toggleSound);
+        bindPointerPress(document.getElementById('coordsBtn'), toggleCoords);
+        bindPointerPress(document.getElementById('themeBtn'), cycleTheme);
+        bindPointerPress(document.getElementById('moveNumBtn'), toggleMoveNumbers);
+        elements.sendLogCommentBtn.addEventListener('click', submitLogComment);
+        elements.logCommentInput.addEventListener('keydown', (event) => {
+            if (event.key !== 'Enter' || event.isComposing) return;
+            event.preventDefault();
+            submitLogComment();
+        });
+        elements.boardCanvas.addEventListener('pointerdown', handleBoardPointerDown);
+        elements.boardCanvas.addEventListener('contextmenu', handleBoardContextMenu);
+
+        window.addEventListener('resize', () => {
+            cancelAnimationFrame(resizeFrame);
+            resizeFrame = requestAnimationFrame(resizeBoard);
+        });
+
+        window.addEventListener('pagehide', () => {
+            notifyHostLeaving();
+        });
+        window.addEventListener('beforeunload', () => {
+            notifyHostLeaving();
+        });
+
+        window.setInterval(periodicClockWork, 250);
+
+        (() => {
+            applyLanguage();
+            resizeBoard();
+            render();
+        })();
+    </script>
+</body>
+</html>
