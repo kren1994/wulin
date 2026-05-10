@@ -1186,7 +1186,9 @@
         const MAX_LOG_ITEMS = 64;
         const ROOM_PREFIX = 'wulin-room-';
         const PLAYER_TOKEN_PREFIX = 'wulin-player-token:';
+        const ROOM_STATE_PREFIX = 'wulin-room-state:';
         const DISCONNECT_GRACE_MS = 120000;
+        const ROOM_STATE_MAX_AGE_MS = 30 * 60 * 1000;
 
         const elements = {
             lobbyScreen: document.getElementById('lobbyScreen'),
@@ -1707,6 +1709,50 @@
             }
         }
 
+        function getRoomStateStorageKey(nextRoomId) {
+            return `${ROOM_STATE_PREFIX}${nextRoomId}`;
+        }
+
+        function persistRoomStateSnapshot() {
+            if (!state || !state.roomId) return;
+            try {
+                window.localStorage.setItem(getRoomStateStorageKey(state.roomId), JSON.stringify({
+                    savedAt: Date.now(),
+                    state,
+                }));
+            } catch (error) {
+                // Best-effort recovery cache.
+            }
+        }
+
+        function clearRoomStateSnapshot(nextRoomId) {
+            if (!nextRoomId) return;
+            try {
+                window.localStorage.removeItem(getRoomStateStorageKey(nextRoomId));
+            } catch (error) {
+                // Best-effort cleanup.
+            }
+        }
+
+        function loadRoomStateSnapshot(nextRoomId, localName) {
+            if (!nextRoomId || !localName) return null;
+            try {
+                const raw = window.localStorage.getItem(getRoomStateStorageKey(nextRoomId));
+                if (!raw) return null;
+                const parsed = JSON.parse(raw);
+                if (!parsed || parsed.state?.roomId !== nextRoomId) return null;
+                if (Date.now() - Number(parsed.savedAt || 0) > ROOM_STATE_MAX_AGE_MS) {
+                    clearRoomStateSnapshot(nextRoomId);
+                    return null;
+                }
+                const participants = Object.values(parsed.state.participantsById || {});
+                if (!participants.some((participant) => participant?.name === localName)) return null;
+                return parsed.state;
+            } catch (error) {
+                return null;
+            }
+        }
+
         function clamp(value, min, max) {
             return Math.min(max, Math.max(min, value));
         }
@@ -1989,12 +2035,11 @@
             });
         }
 
-        function getDisconnectedSeatedParticipantByName(name) {
+        function getSeatedParticipantByName(name) {
             if (!state || !name) return null;
             return Object.values(state.participantsById || {}).find((participant) => {
                 return participant
                     && participant.name === name
-                    && participant.disconnectedAt
                     && (participant.seat === 'black' || participant.seat === 'white');
             }) || null;
         }
@@ -2040,6 +2085,40 @@
             if (Array.isArray(state.joinOrder)) {
                 state.joinOrder = state.joinOrder.map((peerId) => (peerId === oldPeerId ? nextPeerId : peerId));
             }
+        }
+
+        function restoreLocalHostFromSnapshot(nextRoomId, nextHostId, nextHostName, settings, hostToken) {
+            const restored = loadRoomStateSnapshot(nextRoomId, nextHostName);
+            if (!restored) {
+                return createInitialState(nextRoomId, nextHostId, nextHostName, settings, hostToken);
+            }
+
+            state = restored;
+            const localParticipant = Object.values(state.participantsById || {})
+                .find((participant) => participant?.name === nextHostName);
+
+            if (localParticipant && localParticipant.id !== nextHostId) {
+                replacePeerIdReferences(localParticipant.id, nextHostId);
+            }
+
+            if (!state.participantsById[nextHostId]) {
+                state.participantsById[nextHostId] = { id: nextHostId, name: nextHostName, seat: 'spectator', isHost: true, token: hostToken };
+                ensureJoinOrderContains(nextHostId);
+            }
+
+            const participant = state.participantsById[nextHostId];
+            participant.name = nextHostName;
+            participant.token = hostToken || participant.token;
+            delete participant.disconnectedAt;
+            delete participant.disconnectedUntil;
+
+            state.config = state.config || settings;
+            setHostPeerId(nextHostId);
+            ensureClockEntry(nextHostId);
+            rebuildColors();
+            resumeMatchAfterReconnect();
+            persistRoomStateSnapshot();
+            return state;
         }
 
         function getPeerName(peerId) {
@@ -3029,12 +3108,14 @@
 
             if (action.kind === 'comment') {
                 broadcastLogEntry(state.log?.[0]);
+                persistRoomStateSnapshot();
                 renderLog();
                 return;
             }
 
             state.version = (state.version || 0) + 1;
             if (action.kind === 'move') {
+                persistRoomStateSnapshot();
                 broadcastMoveEvent(action);
                 render();
                 return;
@@ -3100,6 +3181,7 @@
 
         function broadcastState() {
             if (localMode !== 'host' || !state) return;
+            persistRoomStateSnapshot();
             guestConnections.forEach((connection) => {
                 if (connection && connection.open) {
                     connection.send({ type: 'state', state });
@@ -3202,12 +3284,14 @@
             }
             if (isPendingMoveConfirmed(event)) clearPendingMove();
             displayMoveCount = -1;
+            persistRoomStateSnapshot();
             render();
         }
 
         function applyLogEntryEvent(event) {
             if (!state || !event || event.kind !== 'log-entry' || !event.entry) return;
             addLogEntry(event.entry);
+            persistRoomStateSnapshot();
             renderLog();
         }
 
@@ -3224,6 +3308,7 @@
 
         function broadcastClocks() {
             if (localMode !== 'host' || !state) return;
+            persistRoomStateSnapshot();
             guestConnections.forEach((connection) => {
                 if (connection && connection.open) {
                     connection.send({ type: 'clock', clocks: state.clocks });
@@ -3391,6 +3476,7 @@
         }
 
         function resetAppState() {
+            persistRoomStateSnapshot();
             destroyNetworkState();
             state = null;
             setConnectionLabel('未接続');
@@ -3422,7 +3508,7 @@
             peer.on('open', (id) => {
                 localMode = 'host';
                 localPeerId = id;
-                state = createInitialState(roomId, id, hostName, settings, localPlayerToken);
+                state = restoreLocalHostFromSnapshot(roomId, id, hostName, settings, localPlayerToken);
                 elements.leaveRoomBtn.disabled = false;
                 setConnectionLabel(i18n('msgRoomCreated'));
                 render();
@@ -3484,7 +3570,7 @@
                 if (message.type === 'hello' && localMode === 'host') {
                     const nextName = sanitizeName(message.name || 'Player');
                     const token = String(message.token || connection.metadata?.token || '');
-                    const reconnectParticipant = getDisconnectedSeatedParticipantByName(nextName);
+                    const reconnectParticipant = getSeatedParticipantByName(nextName);
                     const existing = getParticipantById(connection.peer);
                     if (reconnectParticipant && reconnectParticipant.id !== connection.peer) {
                         reconnectDisconnectedParticipant(reconnectParticipant.id, connection.peer, nextName, token);
@@ -3531,6 +3617,7 @@
 
                 if (message.type === 'state') {
                     state = message.state;
+                    persistRoomStateSnapshot();
                     clearPendingMove();
                     elements.leaveRoomBtn.disabled = false;
                     if (localMode === 'guest') {
@@ -3608,7 +3695,9 @@
         }
 
         function leaveRoom() {
+            const leavingRoomId = state?.roomId || roomId;
             resetAppState();
+            clearRoomStateSnapshot(leavingRoomId);
             showToast(i18n('msgLeftRoom'));
         }
 
