@@ -97,7 +97,7 @@ export class RoomRelay {
     }
 
     if (message.type === 'connection-close') {
-      this.closeConnection(meta.peerId, String(message.connectionId || ''), true);
+      this.closeConnection(meta.peerId, String(message.connectionId || ''), true, String(message.closeReason || ''));
     }
   }
 
@@ -200,7 +200,7 @@ export class RoomRelay {
     });
   }
 
-  closeConnection(fromPeerId, connectionId, notifyPeer) {
+  closeConnection(fromPeerId, connectionId, notifyPeer, closeReason = '') {
     if (!connectionId) return;
     const link = this.connections.get(connectionId);
     if (!link) return;
@@ -218,6 +218,7 @@ export class RoomRelay {
     this.send(targetSocket, {
       type: 'connection-close',
       connectionId,
+      closeReason,
     });
   }
 

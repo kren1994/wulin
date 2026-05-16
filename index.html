@@ -2096,13 +2096,13 @@
             });
         }
 
-        function getDisconnectedSeatedParticipantByName(name) {
+        function findParticipantByName(name, exceptPeerId = '') {
             if (!state || !name) return null;
-            return Object.values(state.participantsById || {}).find((participant) => {
+            const participants = Object.values(state.participantsById || {});
+            return participants.find((participant) => {
                 return participant
-                    && participant.name === name
-                    && participant.disconnectedAt
-                    && (participant.seat === 'black' || participant.seat === 'white');
+                    && participant.id !== exceptPeerId
+                    && participant.name === name;
             }) || null;
         }
 
@@ -2361,20 +2361,17 @@
             return true;
         }
 
-        function reconnectDisconnectedParticipant(oldPeerId, nextPeerId, nextName, token) {
-            const previousParticipant = getParticipantById(oldPeerId);
-            const wasSeated = Boolean(previousParticipant && (previousParticipant.seat === 'black' || previousParticipant.seat === 'white'));
-            const wasMarkedDisconnected = Boolean(previousParticipant && previousParticipant.disconnectedAt);
+        function replaceParticipantConnection(oldPeerId, nextPeerId, nextName, token) {
             const oldConnection = guestConnections.get(oldPeerId);
             if (oldConnection) {
-                if (wasSeated && !wasMarkedDisconnected) {
-                    addLog('presence', i18n('msgDisconnected', previousParticipant.name));
-                }
+                try { oldConnection.send({ type: 'takeover' }); } catch (error) { }
                 suppressedConnectionClosePeers.add(oldPeerId);
                 if (guestConnections.get(oldPeerId) === oldConnection) {
                     guestConnections.delete(oldPeerId);
                 }
-                try { oldConnection.close(); } catch (error) { }
+                window.setTimeout(() => {
+                    try { oldConnection.close('takeover'); } catch (error) { }
+                }, 250);
             }
             replacePeerIdReferences(oldPeerId, nextPeerId);
             const participant = getParticipantById(nextPeerId);
@@ -3654,6 +3651,42 @@
             lastClockBroadcastBucket = null;
         }
 
+        function closeLocalSessionWithoutSnapshot() {
+            clearHostReconnectTimer();
+            const previousHostConnection = hostConnection;
+            const previousPeer = peer;
+            const previousGuestConnections = Array.from(guestConnections.values());
+
+            guestConnections.clear();
+            hostConnection = null;
+            peer = null;
+            roomId = '';
+            localPeerId = '';
+            localMode = 'idle';
+            localPlayerToken = '';
+            hasNotifiedHostLeaving = true;
+            hostTakeoverInProgress = false;
+            suppressLocalPeerClose = false;
+            lastClockBroadcastBucket = null;
+
+            previousGuestConnections.forEach((connection) => {
+                try { connection.close(); } catch (error) { }
+            });
+            if (previousHostConnection) {
+                try { previousHostConnection.close(); } catch (error) { }
+            }
+            if (previousPeer) {
+                try { previousPeer.destroy(); } catch (error) { }
+            }
+
+            state = null;
+            setConnectionLabel('');
+            elements.leaveRoomBtn.disabled = true;
+            setScreen('lobby');
+            updateShareLinkUi();
+            render();
+        }
+
         function notifyHostLeaving() {
             if (hasNotifiedHostLeaving) return;
             if (localMode !== 'guest') return;
@@ -3770,10 +3803,17 @@
                 if (message.type === 'hello' && localMode === 'host') {
                     const nextName = sanitizeName(message.name || 'Player');
                     const token = String(message.token || connection.metadata?.token || '');
-                    const reconnectParticipant = getDisconnectedSeatedParticipantByName(nextName);
+                    const nameMatchedParticipant = findParticipantByName(nextName, connection.peer);
                     const existing = getParticipantById(connection.peer);
-                    if (reconnectParticipant && reconnectParticipant.id !== connection.peer) {
-                        reconnectDisconnectedParticipant(reconnectParticipant.id, connection.peer, nextName, token);
+                    if (nameMatchedParticipant && isHostParticipant(nameMatchedParticipant)) {
+                        connection.send({ type: 'reject', message: 'Display name is already in this room.' });
+                        window.setTimeout(() => {
+                            try { connection.close(); } catch (error) { }
+                        }, 250);
+                        return;
+                    }
+                    if (nameMatchedParticipant) {
+                        replaceParticipantConnection(nameMatchedParticipant.id, connection.peer, nextName, token);
                     } else if (!existing) {
                         state.participantsById[connection.peer] = { id: connection.peer, name: nextName, seat: 'spectator', isHost: false, token };
                         ensureJoinOrderContains(connection.peer);
@@ -3853,13 +3893,22 @@
                     return;
                 }
 
+                if (message.type === 'takeover') {
+                    closeLocalSessionWithoutSnapshot();
+                    return;
+                }
+
                 if (message.type === 'reject') {
                     showToast(message.message);
                     resetAppState();
                 }
             });
 
-            connection.on('close', () => {
+            connection.on('close', (reason) => {
+                if (reason === 'takeover') {
+                    closeLocalSessionWithoutSnapshot();
+                    return;
+                }
                 if (localMode === 'host') {
                     setConnectionLabel(i18n('msgRoomClosed'));
                     if (guestConnections.get(connection.peer) === connection) {

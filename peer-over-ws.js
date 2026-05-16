@@ -55,13 +55,14 @@
             });
         }
 
-        close() {
+        close(reason) {
             if (this._closed) return;
             this._peerRef._send({
                 type: 'connection-close',
                 connectionId: this._connectionId,
+                closeReason: reason || '',
             });
-            this._handleRemoteClose();
+            this._handleRemoteClose(reason || '');
         }
 
         _handleData(data) {
@@ -69,11 +70,11 @@
             this._emit('data', data);
         }
 
-        _handleRemoteClose() {
+        _handleRemoteClose(reason) {
             if (this._closed) return;
             this._closed = true;
             this.open = false;
-            this._emit('close');
+            this._emit('close', reason || '');
             this._peerRef._dropConnection(this._connectionId);
         }
 
@@ -275,7 +276,7 @@
             if (message.type === 'connection-close') {
                 const connection = this._connections.get(String(message.connectionId || ''));
                 if (!connection) return;
-                connection._handleRemoteClose();
+                connection._handleRemoteClose(message.closeReason || '');
             }
         }
     }
