@@ -1188,6 +1188,9 @@
         const ROOM_PREFIX = 'wulin-room-';
         const PLAYER_TOKEN_PREFIX = 'wulin-player-token:';
         const ROOM_STATE_PREFIX = 'wulin-room-state:';
+        const USER_SETTINGS_STORAGE_KEY = 'wulin:user-settings';
+        const DEFAULT_BASE_MINUTES = 5;
+        const DEFAULT_INCREMENT_SECONDS = 5;
         const DISCONNECT_GRACE_MS = 120000;
         const ROOM_STATE_MAX_AGE_MS = 30 * 60 * 1000;
 
@@ -1691,6 +1694,7 @@
             document.getElementById('coordsBtn').textContent = i18n('menuCoords');
             document.getElementById('themeBtn').childNodes[0].nodeValue = i18n('menuTheme');
             document.getElementById('moveNumBtn').textContent = i18n('menuMoveNum');
+            syncViewSettingsControls();
             
             elements.drawDeclineBtn.textContent = i18n('drawDecline');
             elements.drawAcceptBtn.textContent = i18n('drawAccept');
@@ -1785,6 +1789,98 @@
             return Math.min(max, Math.max(min, value));
         }
 
+        function getDefaultUserSettings() {
+            return {
+                displayName: '',
+                roomCode: '',
+                baseMinutes: DEFAULT_BASE_MINUTES,
+                incrementSeconds: DEFAULT_INCREMENT_SECONDS,
+                soundEnabled: true,
+                showCoords: true,
+                showMoveNumbers: true,
+                boardThemeIndex: 0,
+                language: 'ja',
+            };
+        }
+
+        function normalizeUserSettings(settings) {
+            const defaults = getDefaultUserSettings();
+            const next = { ...defaults, ...(settings || {}) };
+            next.displayName = String(next.displayName || '').slice(0, 24);
+            next.roomCode = String(next.roomCode || '').slice(0, 24);
+            const baseMinutes = Number(next.baseMinutes);
+            const incrementSeconds = Number(next.incrementSeconds);
+            next.baseMinutes = clamp(Number.isFinite(baseMinutes) && baseMinutes > 0 ? baseMinutes : defaults.baseMinutes, 1, 180);
+            next.incrementSeconds = clamp(Number.isFinite(incrementSeconds) ? incrementSeconds : defaults.incrementSeconds, 0, 60);
+            next.soundEnabled = next.soundEnabled !== false;
+            next.showCoords = next.showCoords !== false;
+            next.showMoveNumbers = next.showMoveNumbers !== false;
+            next.boardThemeIndex = clamp(Number(next.boardThemeIndex) || 0, 0, boardThemes.length - 1);
+            next.language = next.language === 'zh' ? 'zh' : 'ja';
+            return next;
+        }
+
+        function loadUserSettings() {
+            try {
+                return normalizeUserSettings(JSON.parse(window.localStorage.getItem(USER_SETTINGS_STORAGE_KEY) || 'null'));
+            } catch (error) {
+                return getDefaultUserSettings();
+            }
+        }
+
+        function persistUserSettings(overrides = {}) {
+            const current = loadUserSettings();
+            const next = normalizeUserSettings({ ...current, ...overrides });
+            try {
+                window.localStorage.setItem(USER_SETTINGS_STORAGE_KEY, JSON.stringify(next));
+            } catch (error) {
+                // Best-effort user preference cache.
+            }
+            return next;
+        }
+
+        function readTimeSettingsFromInputs() {
+            const rawBaseMinutes = Number(elements.infoBaseMinutesInput.value);
+            const rawIncrementSeconds = Number(elements.infoIncrementInput.value);
+            const baseMinutes = clamp(Number.isFinite(rawBaseMinutes) && rawBaseMinutes > 0 ? rawBaseMinutes : DEFAULT_BASE_MINUTES, 1, 180);
+            const incrementSeconds = clamp(Number.isFinite(rawIncrementSeconds) ? rawIncrementSeconds : DEFAULT_INCREMENT_SECONDS, 0, 60);
+            return { baseMinutes, incrementSeconds };
+        }
+
+        function persistLobbySettings() {
+            persistUserSettings({
+                displayName: elements.nameInput.value,
+                roomCode: elements.roomCodeInput.value,
+            });
+        }
+
+        function persistTimeSettings() {
+            persistUserSettings(readTimeSettingsFromInputs());
+        }
+
+        function syncViewSettingsControls() {
+            document.getElementById('langBtn').dataset.value = currentLanguage === 'ja' ? '日' : '中';
+            document.getElementById('soundBtn').classList.toggle('active', soundEnabled);
+            document.getElementById('coordsBtn').classList.toggle('active', showCoords);
+            document.getElementById('moveNumBtn').classList.toggle('active', showMoveNumbers);
+            const label = boardThemes[boardThemeIndex].label[currentLanguage] || boardThemes[boardThemeIndex].label['ja'];
+            document.getElementById('themeBtn').dataset.value = label;
+        }
+
+        function applyCachedUserSettings() {
+            const settings = loadUserSettings();
+            elements.nameInput.value = settings.displayName;
+            elements.roomCodeInput.value = settings.roomCode;
+            elements.infoBaseMinutesInput.value = String(settings.baseMinutes);
+            elements.infoIncrementInput.value = String(settings.incrementSeconds);
+            soundEnabled = settings.soundEnabled;
+            showCoords = settings.showCoords;
+            showMoveNumbers = settings.showMoveNumbers;
+            boardThemeIndex = settings.boardThemeIndex;
+            currentLanguage = settings.language;
+            syncViewSettingsControls();
+        }
+
         function nowIsoTime() {
             return new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         }
@@ -1832,9 +1928,10 @@
         }
 
         function buildSettings() {
+            const { baseMinutes, incrementSeconds } = readTimeSettingsFromInputs();
             return {
-                baseSeconds: 5 * 60,
-                incrementSeconds: 5,
+                baseSeconds: baseMinutes * 60,
+                incrementSeconds,
                 opening: 'taraguchi10',
             };
         }
@@ -3520,10 +3617,10 @@
                 return;
             }
 
-            const baseMinutes = clamp(Number(elements.infoBaseMinutesInput.value) || 5, 1, 180);
-            const incrementSeconds = clamp(Number(elements.infoIncrementInput.value) || 5, 0, 60);
+            const { baseMinutes, incrementSeconds } = readTimeSettingsFromInputs();
             elements.infoBaseMinutesInput.value = String(baseMinutes);
             elements.infoIncrementInput.value = String(incrementSeconds);
+            persistTimeSettings();
             state.config.baseSeconds = baseMinutes * 60;
             state.config.incrementSeconds = incrementSeconds;
             Object.keys(state.clocks.remainingMsByPeerId).forEach((peerId) => {
@@ -3713,6 +3810,8 @@
         function joinRoom() {
             if (peer) resetAppState();
 
+            persistLobbySettings();
+            persistTimeSettings();
             const roomCode = elements.roomCodeInput.value.trim();
             if (!roomCode) {
                 showToast(i18n('errNeedRoomCode'));
@@ -4281,7 +4380,8 @@
 
         function renderRoomSummary() {
             if (!state) {
-                elements.roomSummary.textContent = `5 ${i18n('minute')} + 5 ${i18n('second')}`;
+                const { baseMinutes, incrementSeconds } = readTimeSettingsFromInputs();
+                elements.roomSummary.textContent = `${baseMinutes} ${i18n('minute')} + ${incrementSeconds} ${i18n('second')}`;
                 elements.timeEditor.hidden = true;
                 elements.roomSummary.hidden = false;
                 return;
@@ -4632,11 +4732,7 @@
         function cycleLanguage() {
             closeControlMenus();
             currentLanguage = currentLanguage === 'ja' ? 'zh' : 'ja';
-            document.getElementById('langBtn').dataset.value = currentLanguage === 'ja' ? '日' : '中';
-            
-            const label = boardThemes[boardThemeIndex].label[currentLanguage] || boardThemes[boardThemeIndex].label['ja'];
-            document.getElementById('themeBtn').dataset.value = label;
-
+            persistUserSettings({ language: currentLanguage });
             applyLanguage();
         }
 
@@ -4644,6 +4740,7 @@
             closeControlMenus();
             soundEnabled = !soundEnabled;
             document.getElementById('soundBtn').classList.toggle('active', soundEnabled);
+            persistUserSettings({ soundEnabled });
             if (soundEnabled) initAudio();
         }
 
@@ -4651,6 +4748,7 @@
             closeControlMenus();
             showCoords = !showCoords;
             document.getElementById('coordsBtn').classList.toggle('active', showCoords);
+            persistUserSettings({ showCoords });
             resizeBoard();
         }
 
@@ -4659,6 +4757,7 @@
             boardThemeIndex = (boardThemeIndex + 1) % boardThemes.length;
             const label = boardThemes[boardThemeIndex].label[currentLanguage] || boardThemes[boardThemeIndex].label['ja'];
             document.getElementById('themeBtn').dataset.value = label;
+            persistUserSettings({ boardThemeIndex });
             renderBoard();
         }
 
@@ -4666,6 +4765,7 @@
             closeControlMenus();
             showMoveNumbers = !showMoveNumbers;
             document.getElementById('moveNumBtn').classList.toggle('active', showMoveNumbers);
+            persistUserSettings({ showMoveNumbers });
             renderBoard();
         }
 
@@ -4719,6 +4819,8 @@
         }
 
         elements.joinRoomBtn.addEventListener('click', joinRoom);
+        elements.nameInput.addEventListener('input', persistLobbySettings);
+        elements.roomCodeInput.addEventListener('input', persistLobbySettings);
         elements.roomCodeInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') joinRoom();
         });
@@ -4728,6 +4830,8 @@
         bindPointerPress(elements.whiteSeatBtn, () => handleSeatButtonClick('white'));
         elements.infoBaseMinutesInput.addEventListener('change', applyHostTimeSettings);
         elements.infoIncrementInput.addEventListener('change', applyHostTimeSettings);
+        elements.infoBaseMinutesInput.addEventListener('input', persistTimeSettings);
+        elements.infoIncrementInput.addEventListener('input', persistTimeSettings);
         bindPointerPress(elements.drawAcceptBtn, () => sendAction({ kind: 'draw-response', accept: true }));
         bindPointerPress(elements.drawDeclineBtn, () => sendAction({ kind: 'draw-response', accept: false }));
         bindPointerPress(elements.takebackAcceptBtn, () => sendAction({ kind: 'takeback-response', accept: true }));
@@ -4772,6 +4876,7 @@
         window.setInterval(periodicClockWork, 250);
 
         (() => {
+            applyCachedUserSettings();
             applyLanguage();
             resizeBoard();
             render();
