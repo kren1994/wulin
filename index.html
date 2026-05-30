@@ -1422,6 +1422,26 @@
             osc.stop(audioCtx.currentTime + 0.1);
         }
 
+        function playActionNotificationSound() {
+            if (!soundEnabled) return;
+            initAudio();
+            if (!audioCtx) return;
+            const now = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(988, now);
+
+            gain.gain.setValueAtTime(0.24, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+
+            osc.start(now);
+            osc.stop(now + 0.12);
+        }
+
         const boardThemes = [
             { label: { ja: '茶', zh: '棕' }, grad1: '#e3c98c', grad2: '#bc8f51' },
             { label: { ja: '緑', zh: '绿' }, grad1: '#a5c68f', grad2: '#7f9b6b' },
@@ -3327,6 +3347,32 @@
             return '';
         }
 
+        function isSeatedPlayerId(peerId) {
+            const participant = getParticipantById(peerId);
+            return Boolean(participant && (participant.seat === 'black' || participant.seat === 'white'));
+        }
+
+        function isRemoteActionNotificationKind(kind) {
+            return kind === 'swap' || kind === 'draw' || kind === 'takeback';
+        }
+
+        function isActiveActionNotification(kind) {
+            if (kind === 'swap') return true;
+            if (kind === 'draw') return Boolean(state?.drawOfferByPeerId);
+            if (kind === 'takeback') return Boolean(state?.takebackOfferByPeerId);
+            return false;
+        }
+
+        function shouldNotifyRemoteAction(actorPeerId, kind) {
+            return Boolean(
+                isRemoteActionNotificationKind(kind) &&
+                actorPeerId &&
+                actorPeerId !== localPeerId &&
+                isSeatedPlayerId(actorPeerId) &&
+                isSeatedPlayerId(localPeerId)
+            );
+        }
+
         function applyHostAction(peerId, action) {
             if (!state || !action) return;
             let error = '';
@@ -3378,6 +3424,9 @@
             if (['move', 'offer', 'select-offer', 'review-move'].includes(action.kind) && peerId !== localPeerId) {
                 playStoneSound(false);
             }
+            if (isActiveActionNotification(action.kind) && shouldNotifyRemoteAction(peerId, action.kind)) {
+                playActionNotificationSound();
+            }
 
             if (['move', 'swap', 'choice2', 'offer', 'select-offer', 'takeback-response'].includes(action.kind)) {
                 displayMoveCount = -1;
@@ -3409,6 +3458,7 @@
             }
 
             broadcastState();
+            broadcastActionNotification(peerId, action.kind);
             render();
         }
 
@@ -3518,6 +3568,22 @@
             });
         }
 
+        function broadcastActionNotification(actorPeerId, actionKind) {
+            if (localMode !== 'host' || !state) return;
+            if (!isActiveActionNotification(actionKind)) return;
+            const event = {
+                kind: 'action-notification',
+                actionKind,
+                actorPeerId,
+                version: state.version || 0,
+            };
+            guestConnections.forEach((connection) => {
+                if (connection && connection.open && connection.peer !== actorPeerId) {
+                    connection.send({ type: 'event', event });
+                }
+            });
+        }
+
         function requestSnapshot() {
             clearPendingMove();
             renderBoard();
@@ -3583,6 +3649,13 @@
             renderLog();
         }
 
+        function applyActionNotificationEvent(event) {
+            if (!event || event.kind !== 'action-notification') return;
+            if (shouldNotifyRemoteAction(event.actorPeerId, event.actionKind)) {
+                playActionNotificationSound();
+            }
+        }
+
         function applyNetworkEvent(event) {
             if (!event) return;
             if (event.kind === 'move-applied') {
@@ -3591,6 +3664,10 @@
             }
             if (event.kind === 'log-entry') {
                 applyLogEntryEvent(event);
+                return;
+            }
+            if (event.kind === 'action-notification') {
+                applyActionNotificationEvent(event);
             }
         }
 
