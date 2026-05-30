@@ -3114,6 +3114,9 @@
         }
 
         function placeMove(peerId, x, y, timestamp = Date.now()) {
+            if (state?.takebackOfferByPeerId) {
+                return i18n('errTakebackAlready');
+            }
             const originalPhase = state?.phase || '';
             const implicitPhase = getImplicitMovePhase(originalPhase);
             if (implicitPhase) {
@@ -3456,6 +3459,12 @@
                 render();
                 return;
             }
+            if (action.kind === 'takeback' || action.kind === 'takeback-response') {
+                persistRoomStateSnapshot();
+                broadcastTakebackEvent(peerId, action);
+                render();
+                return;
+            }
 
             broadcastState();
             broadcastActionNotification(peerId, action.kind);
@@ -3548,6 +3557,26 @@
             };
         }
 
+        function createTakebackUpdatedEvent(actorPeerId, action) {
+            return {
+                kind: 'takeback-updated',
+                updateKind: action.kind === 'takeback' ? 'requested' : 'responded',
+                accepted: action.kind === 'takeback-response' ? Boolean(action.accept) : null,
+                actorPeerId,
+                version: state.version || 0,
+                moves: state.moves || [],
+                phase: state.phase,
+                status: state.status,
+                winnerId: state.winnerId,
+                resultText: state.resultText,
+                drawOfferByPeerId: state.drawOfferByPeerId,
+                takebackOfferByPeerId: state.takebackOfferByPeerId,
+                opening: state.opening,
+                clocks: state.clocks,
+                readyByPeerId: state.readyByPeerId,
+            };
+        }
+
         function broadcastMoveEvent(action) {
             if (localMode !== 'host' || !state) return;
             const event = createMoveAppliedEvent(action);
@@ -3561,6 +3590,16 @@
         function broadcastLogEntry(entry) {
             if (localMode !== 'host' || !state || !entry) return;
             const event = { kind: 'log-entry', entry };
+            guestConnections.forEach((connection) => {
+                if (connection && connection.open) {
+                    connection.send({ type: 'event', event });
+                }
+            });
+        }
+
+        function broadcastTakebackEvent(actorPeerId, action) {
+            if (localMode !== 'host' || !state) return;
+            const event = createTakebackUpdatedEvent(actorPeerId, action);
             guestConnections.forEach((connection) => {
                 if (connection && connection.open) {
                     connection.send({ type: 'event', event });
@@ -3649,6 +3688,35 @@
             renderLog();
         }
 
+        function applyTakebackUpdatedEvent(event) {
+            if (!state || !event || event.kind !== 'takeback-updated') return;
+
+            const currentVersion = state.version || 0;
+            const nextVersion = event.version || 0;
+            if (nextVersion && nextVersion < currentVersion) return;
+
+            state.moves = Array.isArray(event.moves) ? event.moves : [];
+            state.phase = event.phase;
+            state.status = event.status;
+            state.winnerId = event.winnerId;
+            state.resultText = event.resultText;
+            state.drawOfferByPeerId = event.drawOfferByPeerId || '';
+            state.takebackOfferByPeerId = event.takebackOfferByPeerId || '';
+            state.opening = event.opening;
+            state.clocks = event.clocks;
+            state.readyByPeerId = event.readyByPeerId;
+            state.version = nextVersion || currentVersion;
+            clearPendingMove();
+            displayMoveCount = -1;
+
+            if (event.updateKind === 'requested' && shouldNotifyRemoteAction(event.actorPeerId, 'takeback')) {
+                playActionNotificationSound();
+            }
+
+            persistRoomStateSnapshot();
+            render();
+        }
+
         function applyActionNotificationEvent(event) {
             if (!event || event.kind !== 'action-notification') return;
             if (shouldNotifyRemoteAction(event.actorPeerId, event.actionKind)) {
@@ -3664,6 +3732,10 @@
             }
             if (event.kind === 'log-entry') {
                 applyLogEntryEvent(event);
+                return;
+            }
+            if (event.kind === 'takeback-updated') {
+                applyTakebackUpdatedEvent(event);
                 return;
             }
             if (event.kind === 'action-notification') {
@@ -4038,6 +4110,11 @@
                 }
 
                 if (message.type === 'state') {
+                    const incomingVersion = message.state?.version || 0;
+                    const currentVersion = state?.version || 0;
+                    if (incomingVersion && currentVersion && incomingVersion < currentVersion) {
+                        return;
+                    }
                     state = message.state;
                     persistRoomStateSnapshot();
                     clearPendingMove();
