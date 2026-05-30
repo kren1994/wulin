@@ -386,8 +386,6 @@
         .confirm-backdrop {
             position: fixed;
             inset: 0;
-            display: grid;
-            place-items: center;
             padding: 20px;
             background: rgba(0, 0, 0, 0.05);
             z-index: 30;
@@ -405,6 +403,10 @@
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
             display: grid;
             gap: 14px;
+            position: fixed;
+            left: var(--confirm-dialog-x, 50vw);
+            top: var(--confirm-dialog-y, 50vh);
+            transform: translate(-50%, -100%);
         }
 
         .confirm-actions {
@@ -1213,6 +1215,7 @@
             blackReadyWrap: document.getElementById('blackReadyWrap'),
             whiteReadyWrap: document.getElementById('whiteReadyWrap'),
             boardCanvas: document.getElementById('boardCanvas'),
+            boardControls: document.querySelector('.board-controls'),
             timeEditor: document.getElementById('timeEditor'),
             infoBaseMinutesInput: document.getElementById('infoBaseMinutesInput'),
             infoIncrementInput: document.getElementById('infoIncrementInput'),
@@ -3461,6 +3464,7 @@
         function renderResignConfirm() {
             const visible = resignConfirmOpen && canLocalResign();
             elements.resignConfirm.hidden = !visible;
+            if (visible) updateConfirmDialogPosition();
         }
 
         function broadcastState() {
@@ -3705,6 +3709,7 @@
                 localPeerId !== offerPeerId
             );
             elements.drawConfirm.hidden = !isResponder;
+            if (isResponder) updateConfirmDialogPosition();
         }
 
         function renderTakebackConfirm() {
@@ -3722,6 +3727,7 @@
                 localPeerId !== offerPeerId
             );
             elements.takebackConfirm.hidden = !isResponder;
+            if (isResponder) updateConfirmDialogPosition();
         }
 
         function destroyNetworkState() {
@@ -4099,6 +4105,15 @@
                 cell,
             };
             renderBoard();
+            updateConfirmDialogPosition();
+        }
+
+        function updateConfirmDialogPosition() {
+            if (!elements.boardControls) return;
+            const rect = elements.boardControls.getBoundingClientRect();
+            if (!rect.width || !rect.height) return;
+            document.documentElement.style.setProperty('--confirm-dialog-x', `${rect.left + rect.width / 2}px`);
+            document.documentElement.style.setProperty('--confirm-dialog-y', `${rect.bottom}px`);
         }
 
         function drawConstraintHighlight(descriptor) {
@@ -4517,6 +4532,7 @@
 
             if (isSwapOrChoice && !dismissedActionDialogPhase) {
                 elements.actionConfirm.hidden = false;
+                updateConfirmDialogPosition();
                 
                 elements.actionConfirmButtons.innerHTML = '';
                 
@@ -4609,6 +4625,7 @@
             renderResignConfirm();
             renderActionDialog();
             renderBoard();
+            updateConfirmDialogPosition();
             updateShareLinkUi();
         }
 
