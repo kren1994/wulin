@@ -3117,6 +3117,9 @@
             if (state?.takebackOfferByPeerId) {
                 return i18n('errTakebackAlready');
             }
+            if (state?.drawOfferByPeerId && state.drawOfferByPeerId !== peerId) {
+                state.drawOfferByPeerId = '';
+            }
             const originalPhase = state?.phase || '';
             const implicitPhase = getImplicitMovePhase(originalPhase);
             if (implicitPhase) {
