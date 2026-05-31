@@ -49,7 +49,7 @@ You can also override from URL query while testing:
 
    ?wsEndpoint=ws://127.0.0.1:8787/ws-peer
 
-This value is cached in localStorage (key: wulin:ws-endpoint).
+This value is cached in localStorage (key: playren:ws-endpoint).
 
 If endpoint is not configured, the adapter falls back to same-origin /ws-peer.
 

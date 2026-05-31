@@ -1,4 +1,4 @@
-name = "wulin-ws-worker"
+name = "playren-ws-worker"
 main = "src/index.js"
 compatibility_date = "2026-05-09"
 workers_dev = true
