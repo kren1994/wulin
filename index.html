@@ -4616,7 +4616,7 @@
                     const moveTextY = y + Math.max(1, Math.round(cell * 0.03));
                     ctx.fillStyle = move.color === 'black' ? '#eee' : '#333';
                     const textLen = moveText.length;
-                    const baseRatio = textLen >= 3 ? 0.3 : (textLen === 2 ? 0.38 : 0.45);
+                    const baseRatio = textLen >= 3 ? 0.3 : (textLen === 2 ? 0.38 : 0.41);
                     const fontSize = Math.max(10, Math.floor(cell * baseRatio));
                     ctx.font = `600 ${fontSize}px 'Segoe UI', 'Yu Gothic UI', Meiryo, sans-serif`;
                     ctx.textAlign = 'center'; 
