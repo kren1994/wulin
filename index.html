@@ -65,6 +65,7 @@
         }
 
         .lobby-head {
+            position: relative;
             padding: 20px 22px;
             border-radius: var(--radius-xl);
             border: 1px solid var(--line);
@@ -76,9 +77,35 @@
 
         .lobby-title {
             margin: 0;
+            padding: 0 52px;
             font-size: clamp(30px, 4.6vw, 48px);
             line-height: 0.98;
             letter-spacing: -0.04em;
+        }
+
+        .lobby-lang-btn {
+            position: absolute;
+            top: 50%;
+            right: 18px;
+            transform: translateY(-50%);
+            min-width: 42px;
+            height: 42px;
+            padding: 0 12px;
+            border: 1px solid rgba(74, 54, 34, 0.12);
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.86);
+            color: var(--text);
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 800;
+            touch-action: manipulation;
+            user-select: none;
+            transition: transform 0.18s ease, background 0.18s ease;
+        }
+
+        .lobby-lang-btn:hover {
+            background: rgba(255, 255, 255, 1);
+            transform: translateY(calc(-50% - 1px));
         }
 
         .lobby-grid {
@@ -981,6 +1008,7 @@
         <section id="lobbyScreen" class="screen lobby-screen">
             <header class="lobby-head">
                 <h1 class="lobby-title" id="uiLobbyTitle">対局所</h1>
+                <button id="lobbyLangBtn" class="lobby-lang-btn" type="button" aria-label="言語">日</button>
             </header>
 
             <div class="lobby-grid">
@@ -1242,6 +1270,7 @@
             toast: document.getElementById('toast'),
             
             uiLobbyTitle: document.getElementById('uiLobbyTitle'),
+            lobbyLangBtn: document.getElementById('lobbyLangBtn'),
             uiDisplayNameLabel: document.getElementById('uiDisplayNameLabel'),
             uiRoomCodeLabel: document.getElementById('uiRoomCodeLabel'),
             uiChatTitle: document.getElementById('uiChatTitle'),
@@ -1882,7 +1911,11 @@
         }
 
         function syncViewSettingsControls() {
-            document.getElementById('langBtn').dataset.value = currentLanguage === 'ja' ? '日' : '中';
+            const languageLabel = currentLanguage === 'ja' ? '日' : '中';
+            document.getElementById('langBtn').dataset.value = languageLabel;
+            elements.lobbyLangBtn.textContent = languageLabel;
+            elements.lobbyLangBtn.setAttribute('aria-label', i18n('menuLang'));
+            elements.lobbyLangBtn.title = i18n('menuLang');
             document.getElementById('soundBtn').classList.toggle('active', soundEnabled);
             document.getElementById('coordsBtn').classList.toggle('active', showCoords);
             document.getElementById('moveNumBtn').classList.toggle('active', showMoveNumbers);
@@ -5017,6 +5050,7 @@
         bindPointerPress(elements.resignCancelBtn, closeResignConfirm);
         bindPointerPress(document.getElementById('actionMenuBtn'), () => toggleControlMenu('action'));
         bindPointerPress(document.getElementById('viewMenuBtn'), () => toggleControlMenu('view'));
+        bindPointerPress(elements.lobbyLangBtn, cycleLanguage);
         bindPointerPress(elements.menuResignBtn, resignFromMenu);
         bindPointerPress(elements.menuDrawBtn, offerDrawFromMenu);
         bindPointerPress(elements.menuTakebackBtn, requestTakebackFromMenu);
