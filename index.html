@@ -1472,10 +1472,10 @@
         }
 
         const boardThemes = [
-            { label: { ja: '茶', zh: '棕' }, grad1: '#e3c98c', grad2: '#bc8f51' },
-            { label: { ja: '緑', zh: '绿' }, grad1: '#a5c68f', grad2: '#7f9b6b' },
-            { label: { ja: '灰', zh: '灰' }, grad1: '#efefef', grad2: '#cfcfcf' },
-            { label: { ja: '白', zh: '白' }, grad1: '#ffffff', grad2: '#e0e0e0' }
+            { label: { ja: '茶', zh: '棕', en: 'Brown' }, grad1: '#e3c98c', grad2: '#bc8f51' },
+            { label: { ja: '緑', zh: '绿', en: 'Green' }, grad1: '#a5c68f', grad2: '#7f9b6b' },
+            { label: { ja: '灰', zh: '灰', en: 'Gray' }, grad1: '#efefef', grad2: '#cfcfcf' },
+            { label: { ja: '白', zh: '白', en: 'White' }, grad1: '#ffffff', grad2: '#e0e0e0' }
         ];
 
         const translations = {
@@ -1708,6 +1708,121 @@
                 msgTimeoutLog: '超时。',
                 msgAgreedEndLog: '对局结束。',
                 msgDrawLog: '和棋。'
+            },
+            en: {
+                lobbyTitle: 'Game Room',
+                displayNameLabel: 'Display name',
+                displayNamePlaceholder: 'e.g. kren1994',
+                roomCodeLabel: 'Room code',
+                roomCodePlaceholder: 'e.g. apple123',
+                joinRoom: 'Enter Room',
+                chatTitle: 'Chat',
+                chatPlaceholder: 'Write a comment',
+                chatSend: 'Send',
+                spectatorTitle: 'Spectators',
+                infoTitle: 'Game Info',
+                minute: 'min',
+                second: 'sec',
+                spectatorEmpty: 'No participants in the room yet.',
+                spectatorNone: 'No spectators.',
+                menuTakeback: 'Takeback',
+                menuKifuCopy: 'Copy Kifu',
+                menuDraw: 'Offer Draw',
+                menuResign: 'Resign',
+                menuLang: 'Language',
+                menuSound: 'Sound',
+                menuCoords: 'Coords',
+                menuTheme: 'Board Color',
+                menuMoveNum: 'Move Nos.',
+                actionDialogChoice2: '10 moves',
+                actionDialogSwap: 'Swap',
+                actionDialogRegular: 'Keep',
+                drawDecline: 'Decline',
+                drawAccept: 'Accept Draw',
+                takebackDecline: 'Decline',
+                takebackAccept: 'Accept Takeback',
+                resignCancel: 'Cancel',
+                resignConfirm: 'Resign',
+                playerNotJoined: ' ',
+                readyAriaTitle: 'Ready',
+                readyAriaCancel: 'Cancel ready',
+
+                errNeedRoomCode: 'Enter a room code.',
+                errReviewOnlyAfter: 'Review is available only after the game ends.',
+                errReviewOnlyParticipant: 'Only room participants can review after the game.',
+                errReviewOccupied: 'That point is already occupied.',
+                errReviewNoUndo: 'No moves to undo.',
+                errInvalidSeat: 'Invalid seat.',
+                errSeatOccupied: 'That seat is occupied.',
+                errChangeTimePlaying: 'You cannot change the clock during a game.',
+                errNeedComment: 'Enter a comment.',
+                errConnectionLost: 'Connection to the host was lost.',
+                errCommError: 'A communication error occurred.',
+                errNotYourTurnBoard: 'It is not your turn to use the board.',
+                errOfferOccupied: 'You cannot offer an occupied point.',
+                errOfferDuplicated: 'You cannot offer the same point twice.',
+                errOfferSymmetric: 'You cannot offer a symmetric candidate.',
+                errNotYourTurn: 'It is your opponent\'s turn.',
+                errNotBoardAction: 'It is not time to play on the board.',
+                errConstraintOut: 'That point is outside the current Taraguchi-10 limit.',
+                errCannotSwap: 'You cannot choose swap now.',
+                errNotSwapTurn: 'It is your opponent\'s choice.',
+                errCannotChoice: 'You cannot choose 10 moves now.',
+                errOnlyBlackChoice: 'Only Black can choose this option.',
+                errNotOfferPhase: 'It is not the offer phase.',
+                errOnlyBlackOffer: 'Only Black can offer candidates.',
+                errNotSelectPhase: 'It is not the selection phase.',
+                errOnlyWhiteSelect: 'Only White can select a candidate.',
+                errSelectFromOffers: 'Choose one of the offered candidates.',
+                errDrawPlayingOnly: 'You can offer a draw only during a game.',
+                errDrawPlayerOnly: 'Only players can offer a draw.',
+                errDrawNotYourTurn: 'You cannot offer a draw on your turn.',
+                errDrawNoOpponent: 'No opponent found.',
+                errDrawAlready: 'A draw offer is already pending.',
+                errDrawCannotRespond: 'You cannot respond to a draw offer now.',
+                errDrawNoOffer: 'No draw offer is pending.',
+                errDrawOnlyOpponentRespond: 'Only the opponent can respond to a draw offer.',
+                errTakebackPlayingOnly: 'You can request a takeback only during a game.',
+                errTakebackPlayerOnly: 'Only players can request a takeback.',
+                errTakebackNoOpponent: 'No opponent found.',
+                errTakebackTooEarly: 'Takeback is unavailable before move 7.',
+                errTakebackAlready: 'A takeback request is already pending.',
+                errTakebackCannotRespond: 'You cannot respond to a takeback request now.',
+                errTakebackNoOffer: 'No takeback request is pending.',
+                errTakebackOnlyOpponentRespond: 'Only the opponent can respond to a takeback request.',
+                errResignPlayingOnly: 'You can resign only during a game.',
+                errResignPlayerOnly: 'Only players can resign.',
+                errOnlyEmptySeat: 'You can only sit in an empty seat.',
+                errNotReadyState: 'Cannot change ready state.',
+                errReadyPlayerOnly: 'Only seated players can toggle ready.',
+                errReadyNotPlaying: 'You cannot change ready state during a game.',
+                errUnconnected: 'Connection is not ready.',
+                errNoHostConnection: 'No connection to the host.',
+                msgRoomCreated: 'Creating room',
+                msgRoomConnecting: 'Connecting to room',
+                msgRoomSyncing: 'Syncing',
+                msgRoomGuestConnecting: 'Spectator connecting',
+                msgRoomConnected: 'Connected',
+                msgRoomClosed: 'Connection closed',
+                msgLeftRoom: 'Left the room.',
+                chatNoMessages: 'No chat messages yet.',
+                msgDrawOffered: 'Draw offered.',
+                msgTakebackRequested: 'Takeback requested.',
+                msgRenjuPortalCopied: 'Copied RenjuPortal kifu link.',
+                errCopyFailed: 'Could not copy the kifu link.',
+                msgJoined: (name) => `${name} joined the room.`,
+                msgLeft: (name) => `${name} left the room.`,
+                msgDisconnected: (name) => `${name} disconnected. Waiting for reconnect.`,
+                msgReconnected: (name) => `${name} reconnected.`,
+                msgDisconnectTimeout: (name) => `${name} did not reconnect in time.`,
+                playerDisconnected: (seconds) => `Disconnected ${seconds}s`,
+                errMatchPausedForDisconnect: 'Waiting for the opponent to reconnect.',
+                msgWin: (name) => `${name} wins.`,
+                msgDraw: 'Draw agreed.',
+                msgTimeout: (name) => `${name} lost on time.`,
+                msgTimeoutLog: 'Lost on time.',
+                msgAgreedEndLog: 'Game ended.',
+                msgDrawLog: 'Draw.'
             }
         };
 
@@ -1719,7 +1834,7 @@
         }
 
         function applyLanguage() {
-            document.documentElement.lang = currentLanguage === 'zh' ? 'zh-CN' : 'ja';
+            document.documentElement.lang = currentLanguage === 'zh' ? 'zh-CN' : currentLanguage;
             elements.uiLobbyTitle.textContent = i18n('lobbyTitle');
             elements.uiDisplayNameLabel.textContent = i18n('displayNameLabel');
             elements.nameInput.placeholder = i18n('displayNamePlaceholder');
@@ -1868,7 +1983,7 @@
             next.showCoords = next.showCoords !== false;
             next.showMoveNumbers = next.showMoveNumbers !== false;
             next.boardThemeIndex = clamp(Number(next.boardThemeIndex) || 0, 0, boardThemes.length - 1);
-            next.language = next.language === 'zh' ? 'zh' : 'ja';
+            next.language = ['ja', 'zh', 'en'].includes(next.language) ? next.language : 'ja';
             return next;
         }
 
@@ -1911,7 +2026,7 @@
         }
 
         function syncViewSettingsControls() {
-            const languageLabel = currentLanguage === 'ja' ? '日' : '中';
+            const languageLabel = currentLanguage === 'ja' ? '日' : currentLanguage === 'zh' ? '中' : 'En';
             document.getElementById('langBtn').dataset.value = languageLabel;
             elements.lobbyLangBtn.textContent = languageLabel;
             elements.lobbyLangBtn.setAttribute('aria-label', i18n('menuLang'));
@@ -4938,7 +5053,7 @@
 
         function cycleLanguage() {
             closeControlMenus();
-            currentLanguage = currentLanguage === 'ja' ? 'zh' : 'ja';
+            currentLanguage = currentLanguage === 'ja' ? 'zh' : currentLanguage === 'zh' ? 'en' : 'ja';
             persistUserSettings({ language: currentLanguage });
             applyLanguage();
         }
