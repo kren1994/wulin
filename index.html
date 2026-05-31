@@ -658,6 +658,24 @@
             line-height: 1.55;
         }
 
+        .log-action-button {
+            appearance: none;
+            margin-left: 8px;
+            padding: 0;
+            border: 0;
+            background: transparent;
+            color: var(--accent);
+            font: inherit;
+            font-weight: 700;
+            text-decoration: underline;
+            text-underline-offset: 3px;
+            cursor: pointer;
+        }
+
+        .log-action-button:hover {
+            color: var(--accent-strong);
+        }
+
         .log-compose {
             margin-top: 12px;
             display: grid;
@@ -1082,7 +1100,6 @@
                                     <button id="menuResignBtn" class="control-menu-item" type="button">終局</button>
                                     <button id="menuDrawBtn" class="control-menu-item" type="button">満局提案</button>
                                     <button id="menuTakebackBtn" class="control-menu-item" type="button">待った</button>
-                                    <button id="menuKifuCopyBtn" class="control-menu-item" type="button" hidden>棋譜コピー</button>
                                 </div>
                             </div>
                         </div>
@@ -1266,7 +1283,6 @@
             menuDrawBtn: document.getElementById('menuDrawBtn'),
             menuResignBtn: document.getElementById('menuResignBtn'),
             menuTakebackBtn: document.getElementById('menuTakebackBtn'),
-            menuKifuCopyBtn: document.getElementById('menuKifuCopyBtn'),
             toast: document.getElementById('toast'),
             
             uiLobbyTitle: document.getElementById('uiLobbyTitle'),
@@ -1515,7 +1531,7 @@
                 spectatorEmpty: 'まだ部屋に参加者はいません。',
                 spectatorNone: '観戦者はいません。',
                 menuTakeback: '待った',
-                menuKifuCopy: '棋譜コピー',
+                logKifuCopy: '棋譜コピー (RenjuPortal)',
                 menuDraw: '満局提案',
                 menuResign: '終局',
                 menuLang: '言語',
@@ -1631,7 +1647,7 @@
                 spectatorEmpty: '房间里还没有人。',
                 spectatorNone: '没有观战者。',
                 menuTakeback: '悔棋',
-                menuKifuCopy: '复制棋谱链接',
+                logKifuCopy: '复制棋谱 (RenjuPortal)',
                 menuDraw: '提和',
                 menuResign: '终局',
                 menuLang: '语言',
@@ -1747,7 +1763,7 @@
                 spectatorEmpty: 'No participants in the room yet.',
                 spectatorNone: 'No spectators.',
                 menuTakeback: 'Takeback',
-                menuKifuCopy: 'Copy Kifu',
+                logKifuCopy: 'Copy kifu (RenjuPortal)',
                 menuDraw: 'Offer Draw',
                 menuResign: 'Resign',
                 menuLang: 'Language',
@@ -1884,7 +1900,6 @@
             elements.menuDrawBtn.textContent = i18n('menuDraw');
             elements.menuResignBtn.textContent = i18n('menuResign');
             elements.menuTakebackBtn.textContent = i18n('menuTakeback');
-            elements.menuKifuCopyBtn.textContent = i18n('menuKifuCopy');
             document.getElementById('langBtn').childNodes[0].nodeValue = i18n('menuLang');
             document.getElementById('soundBtn').childNodes[0].nodeValue = i18n('menuSound');
             document.getElementById('coordsBtn').textContent = i18n('menuCoords');
@@ -2178,18 +2193,19 @@
             };
         }
 
-        function createLogEntry(kind, text) {
+        function createLogEntry(kind, text, options = {}) {
             return {
                 id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
                 kind,
                 text,
                 time: nowIsoTime(),
+                ...(options.action ? { action: options.action } : {}),
             };
         }
 
-        function addLog(kind, text) {
+        function addLog(kind, text, options = {}) {
             if (!state) return null;
-            const entry = createLogEntry(kind, text);
+            const entry = createLogEntry(kind, text, options);
             if (!Array.isArray(state.log)) state.log = [];
             state.log.unshift(entry);
             state.log = state.log.slice(0, MAX_LOG_ITEMS);
@@ -3316,7 +3332,7 @@
             state.drawOfferByPeerId = '';
             state.takebackOfferByPeerId = '';
             state.connectionPause = null;
-            if (logText) addLog('system', logText);
+            if (logText) addLog('system', logText, { action: 'copy-renjuportal-kifu' });
             resetReadyFlags();
             setPhase('finished');
             resetReviewMoves();
@@ -4944,13 +4960,10 @@
         function renderControls() {
             const localParticipant = getParticipantById(localPeerId);
             const canManageResult = Boolean(state && state.status === 'playing' && !hasDisconnectedSeatedPlayer() && localParticipant && (localParticipant.seat === 'black' || localParticipant.seat === 'white'));
-            const canCopyKifu = Boolean(state && state.status === 'finished');
             
             elements.menuDrawBtn.disabled = !canManageResult || Boolean(state?.drawOfferByPeerId);
             elements.menuResignBtn.disabled = !canManageResult;
             elements.menuTakebackBtn.disabled = !canManageResult || Boolean(state?.takebackOfferByPeerId);
-            elements.menuKifuCopyBtn.hidden = !canCopyKifu;
-            elements.menuKifuCopyBtn.disabled = !canCopyKifu;
         }
 
         function renderActionDialog() {
@@ -5029,9 +5042,18 @@
 
                 const body = document.createElement('div');
                 body.className = 'log-body';
-                body.textContent = entry.kind === 'comment'
+                const bodyText = entry.kind === 'comment'
                     ? String(entry.text || '').split('\n').slice(1).join('\n')
                     : entry.text;
+                body.textContent = bodyText;
+                if (entry.kind === 'system' && entry.action === 'copy-renjuportal-kifu') {
+                    const action = document.createElement('button');
+                    action.className = 'log-action-button';
+                    action.type = 'button';
+                    action.textContent = i18n('logKifuCopy');
+                    action.addEventListener('click', copyRenjuPortalKifu);
+                    body.append(action);
+                }
 
                 if (head.childElementCount) item.append(head);
                 item.append(body);
@@ -5165,8 +5187,7 @@
             sendAction({ kind: 'takeback' });
         }
 
-        async function copyKifuFromMenu() {
-            closeControlMenus();
+        async function copyRenjuPortalKifu() {
             if (!state || state.status !== 'finished') return;
 
             try {
@@ -5303,7 +5324,6 @@
         bindPointerPress(elements.menuResignBtn, resignFromMenu);
         bindPointerPress(elements.menuDrawBtn, offerDrawFromMenu);
         bindPointerPress(elements.menuTakebackBtn, requestTakebackFromMenu);
-        bindPointerPress(elements.menuKifuCopyBtn, copyKifuFromMenu);
         bindPointerPress(document.getElementById('langBtn'), cycleLanguage);
         bindPointerPress(document.getElementById('soundBtn'), toggleSound);
         bindPointerPress(document.getElementById('coordsBtn'), toggleCoords);
