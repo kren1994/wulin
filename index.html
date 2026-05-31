@@ -1302,6 +1302,8 @@
         let currentLanguage = 'ja';
         let displayMoveCount = -1;
         let pendingMove = null;
+        let lastMoveHighlight = null;
+        let lastMoveHighlightTimer = 0;
         let currentOpenControlMenu = null;
         let dismissedActionDialogPhase = '';
         let localPlayerToken = '';
@@ -1316,6 +1318,7 @@
         const STONE_SOUND_SRC = './mp3/play1.mp3';
         const STONE_SOUND_POOL_SIZE = 4;
         const STONE_SOUND_POOL_MAX = 8;
+        const LAST_MOVE_HIGHLIGHT_MS = 2000;
         let stoneSoundBuffer = null;
         let stoneSoundBufferPromise = null;
         let stoneSoundPool = [];
@@ -2192,6 +2195,30 @@
 
         function clearPendingMove() {
             pendingMove = null;
+        }
+
+        function clearLastMoveHighlight() {
+            lastMoveHighlight = null;
+            if (lastMoveHighlightTimer) {
+                clearTimeout(lastMoveHighlightTimer);
+                lastMoveHighlightTimer = 0;
+            }
+        }
+
+        function startLastMoveHighlight(move) {
+            if (!move) return;
+            clearLastMoveHighlight();
+            lastMoveHighlight = {
+                x: move.x,
+                y: move.y,
+                number: move.number,
+                expiresAt: Date.now() + LAST_MOVE_HIGHLIGHT_MS,
+            };
+            lastMoveHighlightTimer = window.setTimeout(() => {
+                lastMoveHighlight = null;
+                lastMoveHighlightTimer = 0;
+                renderBoard();
+            }, LAST_MOVE_HIGHLIGHT_MS);
         }
 
         function setPendingMove(action) {
@@ -3605,10 +3632,14 @@
 
             state.version = (state.version || 0) + 1;
             if (action.kind === 'move') {
+                startLastMoveHighlight(state.moves[state.moves.length - 1]);
                 persistRoomStateSnapshot();
                 broadcastMoveEvent(action);
                 render();
                 return;
+            }
+            if (action.kind === 'select-offer') {
+                startLastMoveHighlight(state.moves[state.moves.length - 1]);
             }
             if (action.kind === 'takeback' || action.kind === 'takeback-response') {
                 persistRoomStateSnapshot();
@@ -3810,6 +3841,7 @@
             }
 
             state.moves.push(event.move);
+            startLastMoveHighlight(event.move);
             if (event.move.peerId !== localPeerId) playStoneSound(false);
 
             state.phase = event.phase;
@@ -4032,6 +4064,7 @@
 
         function destroyNetworkState() {
             clearHostReconnectTimer();
+            clearLastMoveHighlight();
             guestConnections.forEach((connection) => {
                 try { connection.close(); } catch (error) { }
             });
@@ -4263,12 +4296,23 @@
                 if (message.type === 'state') {
                     const incomingVersion = message.state?.version || 0;
                     const currentVersion = state?.version || 0;
+                    const currentMoveCount = state?.moves?.length || 0;
+                    const incomingMoves = Array.isArray(message.state?.moves) ? message.state.moves : [];
+                    const shouldHighlightIncomingMove = Boolean(
+                        state &&
+                        incomingVersion &&
+                        incomingVersion > currentVersion &&
+                        incomingMoves.length > currentMoveCount
+                    );
                     if (incomingVersion && currentVersion && incomingVersion < currentVersion) {
                         return;
                     }
                     state = message.state;
                     persistRoomStateSnapshot();
                     clearPendingMove();
+                    if (shouldHighlightIncomingMove) {
+                        startLastMoveHighlight(incomingMoves[incomingMoves.length - 1]);
+                    }
                     elements.leaveRoomBtn.disabled = false;
                     if (localMode === 'guest') {
                         roomId = state.roomId;
@@ -4498,6 +4542,13 @@
             moves.forEach((move, index) => {
                 const x = padding + move.x * cell;
                 const y = topPadding + move.y * cell;
+                const isHighlightedLastMove = displayMoveCount === -1
+                    && index === moves.length - 1
+                    && lastMoveHighlight
+                    && Date.now() < lastMoveHighlight.expiresAt
+                    && move.x === lastMoveHighlight.x
+                    && move.y === lastMoveHighlight.y
+                    && move.number === lastMoveHighlight.number;
                 
                 ctx.beginPath(); 
                 ctx.arc(x, y, cell * 0.45, 0, Math.PI * 2);
@@ -4506,6 +4557,16 @@
                 ctx.lineWidth = 1; 
                 ctx.strokeStyle = '#333'; 
                 ctx.stroke();
+
+                if (isHighlightedLastMove) {
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.arc(x, y, cell * 0.5, 0, Math.PI * 2);
+                    ctx.lineWidth = Math.max(3, cell * 0.08);
+                    ctx.strokeStyle = 'rgba(255, 163, 64, 0.58)';
+                    ctx.stroke();
+                    ctx.restore();
+                }
 
                 if (showMoveNumbers) {
                     const moveText = String(index + 1);
