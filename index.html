@@ -100,12 +100,28 @@
             font-weight: 800;
             touch-action: manipulation;
             user-select: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
             transition: transform 0.18s ease, background 0.18s ease;
         }
 
         .lobby-lang-btn:hover {
             background: rgba(255, 255, 255, 1);
             transform: translateY(calc(-50% - 1px));
+        }
+
+        .language-icon {
+            width: 16px;
+            height: 16px;
+            flex: 0 0 auto;
+        }
+
+        .language-code {
+            min-width: 2.2em;
+            text-align: left;
+            letter-spacing: 0;
         }
 
         .lobby-grid {
@@ -532,6 +548,14 @@
         .board-controls .control-menu-item.active::after { content: '✓'; color: var(--muted); }
         .board-controls .control-menu-item.board-theme-item::after,
         .board-controls .control-menu-item[data-value]::after { content: attr(data-value); width: auto; flex: 0 0 auto; color: var(--muted); }
+        .board-controls .control-menu-item.language-menu-item::after { content: none; display: none; }
+        .control-menu-value {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--muted);
+            font-weight: 700;
+        }
         
         .nav-btn {
             padding: 0; display: inline-flex; align-items: center; justify-content: center;
@@ -1026,7 +1050,15 @@
         <section id="lobbyScreen" class="screen lobby-screen">
             <header class="lobby-head">
                 <h1 class="lobby-title" id="uiLobbyTitle">対局所</h1>
-                <button id="lobbyLangBtn" class="lobby-lang-btn" type="button" aria-label="言語">日</button>
+                <button id="lobbyLangBtn" class="lobby-lang-btn" type="button" aria-label="言語">
+                    <svg class="language-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="M2 12h20"></path>
+                        <path d="M12 2a15.3 15.3 0 0 1 0 20"></path>
+                        <path d="M12 2a15.3 15.3 0 0 0 0 20"></path>
+                    </svg>
+                    <span class="language-code">JA</span>
+                </button>
             </header>
 
             <div class="lobby-grid">
@@ -1122,7 +1154,18 @@
                                     </span>
                                 </button>
                                 <div id="viewMenu" class="control-menu-popup" hidden>
-                                    <button id="langBtn" class="control-menu-item" type="button" data-value="日">言語</button>
+                                    <button id="langBtn" class="control-menu-item language-menu-item" type="button">
+                                        <span class="control-menu-label">言語</span>
+                                        <span class="control-menu-value">
+                                            <svg class="language-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                                <circle cx="12" cy="12" r="10"></circle>
+                                                <path d="M2 12h20"></path>
+                                                <path d="M12 2a15.3 15.3 0 0 1 0 20"></path>
+                                                <path d="M12 2a15.3 15.3 0 0 0 0 20"></path>
+                                            </svg>
+                                            <span class="language-code">JA</span>
+                                        </span>
+                                    </button>
                                     <button id="soundBtn" class="control-menu-item active" type="button">効果音</button>
                                     <button id="coordsBtn" class="control-menu-item active" type="button">座標</button>
                                     <button id="themeBtn" class="control-menu-item board-theme-item" type="button" data-value="茶">盤面色</button>
@@ -1900,7 +1943,7 @@
             elements.menuDrawBtn.textContent = i18n('menuDraw');
             elements.menuResignBtn.textContent = i18n('menuResign');
             elements.menuTakebackBtn.textContent = i18n('menuTakeback');
-            document.getElementById('langBtn').childNodes[0].nodeValue = i18n('menuLang');
+            document.querySelector('#langBtn .control-menu-label').textContent = i18n('menuLang');
             document.getElementById('soundBtn').childNodes[0].nodeValue = i18n('menuSound');
             document.getElementById('coordsBtn').textContent = i18n('menuCoords');
             document.getElementById('themeBtn').childNodes[0].nodeValue = i18n('menuTheme');
@@ -2070,10 +2113,12 @@
         }
 
         function syncViewSettingsControls() {
-            const languageLabel = currentLanguage === 'ja' ? '日' : currentLanguage === 'zh' ? '中' : 'En';
-            document.getElementById('langBtn').dataset.value = languageLabel;
-            elements.lobbyLangBtn.textContent = languageLabel;
-            elements.lobbyLangBtn.setAttribute('aria-label', i18n('menuLang'));
+            const languageCode = currentLanguage.toUpperCase();
+            document.querySelectorAll('.language-code').forEach((item) => {
+                item.textContent = languageCode;
+            });
+            document.getElementById('langBtn').setAttribute('aria-label', `${i18n('menuLang')}: ${languageCode}`);
+            elements.lobbyLangBtn.setAttribute('aria-label', `${i18n('menuLang')}: ${languageCode}`);
             elements.lobbyLangBtn.title = i18n('menuLang');
             document.getElementById('soundBtn').classList.toggle('active', soundEnabled);
             document.getElementById('coordsBtn').classList.toggle('active', showCoords);
