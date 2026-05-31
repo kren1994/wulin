@@ -1304,6 +1304,8 @@
         let pendingMove = null;
         let lastMoveHighlight = null;
         let lastMoveHighlightTimer = 0;
+        let boardAlertHighlight = null;
+        let boardAlertHighlightTimer = 0;
         let currentOpenControlMenu = null;
         let dismissedActionDialogPhase = '';
         let localPlayerToken = '';
@@ -1322,6 +1324,7 @@
         const NOTIFICATION_SOUND_POOL_SIZE = 4;
         const NOTIFICATION_SOUND_POOL_MAX = 8;
         const LAST_MOVE_HIGHLIGHT_MS = 2000;
+        const BOARD_ALERT_HIGHLIGHT_MS = 2000;
         let stoneSoundBuffer = null;
         let stoneSoundBufferPromise = null;
         let stoneSoundPool = [];
@@ -2230,6 +2233,28 @@
                 lastMoveHighlightTimer = 0;
                 renderBoard();
             }, LAST_MOVE_HIGHLIGHT_MS);
+        }
+
+        function clearBoardAlertHighlight() {
+            boardAlertHighlight = null;
+            if (boardAlertHighlightTimer) {
+                clearTimeout(boardAlertHighlightTimer);
+                boardAlertHighlightTimer = 0;
+            }
+        }
+
+        function startBoardAlertHighlight(kind) {
+            clearBoardAlertHighlight();
+            boardAlertHighlight = {
+                kind,
+                expiresAt: Date.now() + BOARD_ALERT_HIGHLIGHT_MS,
+            };
+            renderBoard();
+            boardAlertHighlightTimer = window.setTimeout(() => {
+                boardAlertHighlight = null;
+                boardAlertHighlightTimer = 0;
+                renderBoard();
+            }, BOARD_ALERT_HIGHLIGHT_MS);
         }
 
         function setPendingMove(action) {
@@ -3652,6 +3677,9 @@
             if (action.kind === 'select-offer') {
                 startLastMoveHighlight(state.moves[state.moves.length - 1]);
             }
+            if (action.kind === 'swap' && shouldNotifyRemoteAction(peerId, action.kind)) {
+                startBoardAlertHighlight('swap');
+            }
             if (action.kind === 'takeback' || action.kind === 'takeback-response') {
                 persistRoomStateSnapshot();
                 broadcastTakebackEvent(peerId, action);
@@ -3914,6 +3942,9 @@
         function applyActionNotificationEvent(event) {
             if (!event || event.kind !== 'action-notification') return;
             if (shouldNotifyRemoteAction(event.actorPeerId, event.actionKind)) {
+                if (event.actionKind === 'swap') {
+                    startBoardAlertHighlight('swap');
+                }
                 playActionNotificationSound();
             }
         }
@@ -4076,6 +4107,7 @@
         function destroyNetworkState() {
             clearHostReconnectTimer();
             clearLastMoveHighlight();
+            clearBoardAlertHighlight();
             guestConnections.forEach((connection) => {
                 try { connection.close(); } catch (error) { }
             });
@@ -4631,6 +4663,20 @@
             ctx.restore();
         }
 
+        function drawBoardAlertHighlight() {
+            if (!boardGeometry || !boardAlertHighlight || Date.now() >= boardAlertHighlight.expiresAt) return;
+            const { size, cell } = boardGeometry;
+            const lineWidth = Math.max(3, Math.min(7, cell * 0.14));
+            const inset = lineWidth / 2 + 2;
+            ctx.save();
+            ctx.strokeStyle = 'rgba(255, 163, 64, 0.58)';
+            ctx.lineWidth = lineWidth;
+            ctx.shadowColor = 'rgba(255, 163, 64, 0.26)';
+            ctx.shadowBlur = Math.max(6, cell * 0.22);
+            ctx.strokeRect(inset, inset, size - inset * 2, size - inset * 2);
+            ctx.restore();
+        }
+
         function renderBoard() {
             if (!boardGeometry) return;
             const { size, padding, topPadding, rightPadding, bottomPadding, coordinateGap, cell } = boardGeometry;
@@ -4691,6 +4737,7 @@
                 drawOfferedMoves();
             }
             drawStones();
+            drawBoardAlertHighlight();
         }
 
         function boardPointFromEvent(event) {
