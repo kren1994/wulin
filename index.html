@@ -1316,12 +1316,16 @@
         let soundEnabled = true;
         let audioCtx = null;
         const STONE_SOUND_SRC = './mp3/play1.mp3';
+        const NOTIFICATION_SOUND_SRC = './mp3/notify.wav';
         const STONE_SOUND_POOL_SIZE = 4;
         const STONE_SOUND_POOL_MAX = 8;
+        const NOTIFICATION_SOUND_POOL_SIZE = 4;
+        const NOTIFICATION_SOUND_POOL_MAX = 8;
         const LAST_MOVE_HIGHLIGHT_MS = 2000;
         let stoneSoundBuffer = null;
         let stoneSoundBufferPromise = null;
         let stoneSoundPool = [];
+        let notificationSoundPool = [];
         let audioResumePromise = null;
         let lastReportedSec = null;
 
@@ -1351,8 +1355,21 @@
             });
         }
 
+        function initNotificationSound() {
+            if (notificationSoundPool.length || !window.Audio) return;
+            notificationSoundPool = Array.from({ length: NOTIFICATION_SOUND_POOL_SIZE }, () => {
+                return createNotificationAudioElement();
+            });
+        }
+
         function createStoneAudioElement() {
             const sound = new Audio(STONE_SOUND_SRC);
+            sound.preload = 'auto';
+            return sound;
+        }
+
+        function createNotificationAudioElement() {
+            const sound = new Audio(NOTIFICATION_SOUND_SRC);
             sound.preload = 'auto';
             return sound;
         }
@@ -1389,7 +1406,11 @@
             initAudio();
             ensureStoneSoundBuffer();
             initStoneSound();
+            initNotificationSound();
             stoneSoundPool.forEach((sound) => {
+                try { sound.load(); } catch (error) {}
+            });
+            notificationSoundPool.forEach((sound) => {
                 try { sound.load(); } catch (error) {}
             });
         }
@@ -1427,6 +1448,23 @@
             sound.play().catch(() => {});
         }
 
+        function playNotificationSoundFile() {
+            initNotificationSound();
+            if (!notificationSoundPool.length) return;
+            let sound = notificationSoundPool.find((item) => item.paused || item.ended);
+            if (!sound && notificationSoundPool.length < NOTIFICATION_SOUND_POOL_MAX) {
+                sound = createNotificationAudioElement();
+                notificationSoundPool.push(sound);
+            }
+            if (!sound) return;
+            try {
+                sound.currentTime = 0;
+            } catch (error) {
+                // iOS may reject currentTime before metadata is available; play from the start anyway.
+            }
+            sound.play().catch(() => {});
+        }
+
         function playStoneSound(isSelf) {
             if (!soundEnabled) return;
             initAudio();
@@ -1438,40 +1476,13 @@
         function playCountdownSound() {
             if (!soundEnabled) return;
             initAudio();
-            if (!audioCtx) return;
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(880, audioCtx.currentTime);
-            
-            gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-            
-            osc.start();
-            osc.stop(audioCtx.currentTime + 0.1);
+            playNotificationSoundFile();
         }
 
         function playActionNotificationSound() {
             if (!soundEnabled) return;
             initAudio();
-            if (!audioCtx) return;
-            const now = audioCtx.currentTime;
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(988, now);
-
-            gain.gain.setValueAtTime(0.24, now);
-            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
-
-            osc.start(now);
-            osc.stop(now + 0.12);
+            playNotificationSoundFile();
         }
 
         const boardThemes = [
@@ -5124,7 +5135,10 @@
             soundEnabled = !soundEnabled;
             document.getElementById('soundBtn').classList.toggle('active', soundEnabled);
             persistUserSettings({ soundEnabled });
-            if (soundEnabled) initAudio();
+            if (soundEnabled) {
+                initAudio();
+                initNotificationSound();
+            }
         }
 
         function toggleCoords() {
